@@ -1,0 +1,15 @@
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    // File Layout
+    "outDir": "./.Public",
+    "rootDir": "Private",
+    "module": "esnext",
+    "target": "es2020",
+    "types": [],
+    "strict": true,
+    "moduleResolution": "bundler"
+  },
+
+  "exclude": ["backup"]
+}

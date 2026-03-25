@@ -1,0 +1,16 @@
+{
+  "name": "zenim",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsc && node ./.Public/Main.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@types/typescript": "^0.4.29",
+    "typescript": "^6.0.2"
+  }
+}
