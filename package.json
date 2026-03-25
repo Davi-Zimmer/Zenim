@@ -1,9 +1,9 @@
 {
   "name": "zenim",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "index.js",
   "scripts": {
-    "dev": "tsc && node ./.Public/Main.js"
+    "dev": "cls && tsc && node ./.Public/Main.js"
   },
   "keywords": [],
   "author": "",
