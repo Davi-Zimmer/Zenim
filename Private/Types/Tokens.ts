@@ -67,7 +67,12 @@ export enum TKind {
     Bool = "Bool",
     Null = "Null",
     Void = "Void",
-    Dbl  = "Dbl"
+    Dbl  = "Dbl",
+
+    True   = "True",
+    False  = "False",
+    Maybe  = "Maybe",
+
         
 }
 

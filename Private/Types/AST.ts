@@ -13,7 +13,15 @@ export enum AstKind {
     Statement           = "Statement",
     Program             = "Program",
     BinaryExpression    = "BinaryExpression",
+    UnaryExpression     = "UnaryExpression",
     ExpressionStatement = "ExpressionStatement",
+
+
+    MemberAccess = "MemberAccess",
+
+
+
+    VariableDeclaration = "VariableDeclaration"
 
 }
 
@@ -72,7 +80,7 @@ export interface LiteralChar extends Expr {
 
 export interface LiteralBool extends Expr {
     kind: AstKind.LiteralBool
-    value: string
+    value: boolean | 'maybe'
 }
 
 export interface LiteralNull extends Expr {
@@ -86,16 +94,44 @@ export interface LiteralVoid extends Expr {
 }
 
 
-export type LiteralValue = LiteralBool | LiteralString | LiteralChar | LiteralNumber | LiteralVoid | LiteralNull // | LiteralFloat | LiteralDouble
+export type LiteralValue = LiteralBool | LiteralString | LiteralChar | LiteralNumber | LiteralVoid | LiteralNull | LiteralBool // | LiteralFloat | LiteralDouble
  
 
 // ----------------------------------- _Expressions_ ----------------------------------- \\
 
-export interface BinaryExpression {
+export interface BinaryExpression extends Expr {
     kind     : AstKind.BinaryExpression
     left     : Expr
     right    : Expr
     operator : string
+}
+
+
+
+export interface Unary extends Expr {
+    kind     : AstKind.UnaryExpression
+    right    : Expr
+    operator : string
+}
+
+export interface MemberAccess {
+    kind   : AstKind.MemberAccess
+    object : Expr
+    member : string
+}
+
+// ----------------------------------- _Declarations_ ----------------------------------- \\
+
+export interface TypedBinding {
+    modifiers : Modifiers[]
+    typeToken : Token
+}
+
+export interface VariableDeclaration extends Statement {
+    kind         : AstKind.VariableDeclaration 
+    identifier   : string
+    binding      : TypedBinding
+    initializer? : Expr
 }
 
 
@@ -104,10 +140,6 @@ export interface BinaryExpression {
 export type Modifiers = TKind.Once | TKind.Mut
 
 
-export interface TypedBinding {
-    modifiers : Modifiers[]
-    typeToken : Token
-}
 
 
 export type AST = Program | Statement
