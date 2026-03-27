@@ -4,8 +4,10 @@ export enum TKind {
     Eof = "Eof",
     Identifier    = "Identifier",
     Number        = "Number",
-    CharLiteral   = "CharLiteral",
+    VoidLiteral   = "VoidLiteral",
+    NullLiteral   = "NullLiteral",
     StringLiteral = "StringLiteral",
+    CharLiteral   = "CharLiteral",
     BoolLiteral   = "BooleanLiteral",
     NumberLiteral = "NumberLiteral",
     
