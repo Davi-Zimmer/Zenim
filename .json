@@ -1,0 +1,23 @@
+{
+      "kind": "VariableDeclaration", 
+      "identifier": "x",
+      "type": {
+         "kind": "Pointer",
+         "inner": {
+            "kind": "Nullable",      
+            "inner": {
+               "kind": "Array",      
+               "inner": {
+                  "kind": "Nullable",
+                  "inner": {
+                     "kind": "Base", 
+                     "name": "int"   
+                  }
+               },
+               "size": 5
+            }
+         }
+      },
+      "modifiers": []
+   }
+

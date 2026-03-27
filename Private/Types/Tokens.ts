@@ -36,6 +36,7 @@ export enum TKind {
     Comma        = ",",
     Dot          = ".",
     UnderLine    = "_",
+    DotDot       = "..",
 
     // Comparators
     EqualsEquals   = "==",

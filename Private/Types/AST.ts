@@ -19,9 +19,7 @@ export enum AstKind {
 
     MemberAccess = "MemberAccess",
 
-
-
-    VariableDeclaration = "VariableDeclaration"
+    VariableDeclaration = "VariableDeclaration",
 
 }
 
@@ -121,23 +119,35 @@ export interface MemberAccess {
 }
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
+export type Type =
+  | { kind: "Base", name: string }
+  | { kind: "Pointer", inner: Type }
+  | { kind: "UniquePointer", inner: Type }
+  | { kind: "Array", size: number, inner: Type }
+  | { kind: "Nullable", inner: Type }
+  
 
 export interface TypedBinding {
-    modifiers : Modifiers[]
-    typeToken : Token
+    identifier : string
+    type       : Type
+    modifiers ?: Modifiers[]
+
 }
 
 export interface VariableDeclaration extends Statement {
     kind         : AstKind.VariableDeclaration 
     identifier   : string
-    binding      : TypedBinding
-    initializer? : Expr
+    type         : Type
+    modifiers   ?: Modifiers[]
+    initializer ?: Expr
 }
 
 
 // ----------------------------------- _XXX_ ----------------------------------- \\
 
 export type Modifiers = TKind.Once | TKind.Mut
+
+
 
 
 

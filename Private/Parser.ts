@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, TypedBinding, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -6,14 +6,6 @@ class Parser {
     private tokens: Token[] = []
 
     private current = 0
-
-    private errorLocation(){
-
-        const p = this.peek()
-
-        return `at line: ${p.line}, Column: ${p.column} to ${p.column + p.length}`
-
-    }
 
     constructor( tokens: Token[] ){
         
@@ -124,6 +116,14 @@ class Parser {
 
     // ----------------------------------- _Helpers_ ----------------------------------- \\
     
+    private errorLocation(){
+
+        const p = this.peek()
+
+        return `at line: ${p.line}, Column: ${p.column} to ${p.column + p.length}`
+
+    }
+
     private isPrimitive(){
         return this.check(
             TKind.Int
@@ -152,36 +152,121 @@ class Parser {
 
     }
 
-    private parseModifiers(){
+    private consumeTypeName(){
 
-        const modifiers: Modifiers[] = []
+        if( this.check( TKind.Identifier, TKind.Int, TKind.Flt, TKind.Str ) ) return this.advance()
 
-        while( this.isModifier() && !this.isAtEnd() ) {
+        throw new Error(`Expected Type ${ this.errorLocation() }`)
 
-            modifiers.push( this.peek().kind as Modifiers )
+    }
 
-            this.advance()
+    private parsePrimaryType(){
+
+        if( this.match( TKind.LeftParen ) ){
             
+            const type = this.parseType()
+
+            this.consume( TKind.RightParen )
+
+            return type
+
         }
 
-        return modifiers
-
-    }
-
-    private parseBinding(){
-
-        const modifiers = this.parseModifiers()
-        
-        const kind = this.advance()
-
-        if( !kind ) throw new Error("Missing variable type " + this.errorLocation() )
+        const name = this.consumeTypeName()
 
         return {
-            modifiers,
-            typeToken: kind
-        } as TypedBinding
+            kind: "Base",
+            name: name?.lexeme
+        } as Type
 
     }
+
+    private parseArrayType(): Type{
+
+        if( this.check( TKind.NumberLiteral ) ){
+
+            const size = this.consume( TKind.NumberLiteral )?.literal
+            
+            this.consume( TKind.DotDot )
+
+            const inner = this.parseArrayType()
+
+            return {
+                kind: "Array",
+                inner,
+                size 
+            } as Type
+
+        }
+
+        return this.parsePrimaryType()
+
+    }
+
+    private parseType(): Type {
+        
+        let type = this.parseArrayType()
+
+        while( true ) {
+
+            if( this.match( TKind.Question ) ) {
+                type = { kind: "Nullable", inner: type }
+                continue
+            }
+
+            if( this.match( TKind.Star ) ) {
+                type = { kind: "Pointer", inner: type }
+                continue
+            }
+
+            if( this.match( TKind.Circumflex ) ) {
+                type = { kind: "UniquePointer", inner: type }
+                continue
+            }
+
+            break
+        }
+
+        return type
+
+    }
+
+    private checkFuturePeek( index: number, kind: TKind ){
+
+        if( this.current + index >= this.tokens.length ) return false
+
+        return this.tokens[ this.current + index ].kind === kind
+
+    }
+  
+    private tryParseType() {
+        
+        const checkpoint = this.current
+        
+        try {
+
+            this.parseType()
+
+            if( this.check( TKind.Identifier ) ){
+
+                this.current = checkpoint
+
+                return false
+
+            }
+
+            return true
+            
+        } catch {
+
+            this.current = checkpoint
+
+            return false
+
+        }
+
+    }
+
 
     // ----------------------------------- _Declarations_ ----------------------------------- \\
     
@@ -198,9 +283,7 @@ class Parser {
             TKind.Dbl,
             TKind.Void,
             TKind.Null,
-            // TKind.Identifier
-
-        )
+        ) || this.check( TKind.NumberLiteral ) && this.checkFuturePeek( 1, TKind.DotDot ) || !this.tryParseType()
 
     }
 
@@ -221,9 +304,7 @@ class Parser {
 
     private declarations(){
         
-        const binding = this.parseBinding()
-
-        const a = this.variableDeclaration( binding )
+        const a = this.variableDeclaration()
 
         this.consume( TKind.Semicolon )
 
@@ -231,18 +312,24 @@ class Parser {
 
     }
 
-    private variableDeclaration( binding: TypedBinding ){
+    private variableDeclaration(){
+
+        const modifiers: Modifiers[] = []
+
+        const type = this.parseType()
 
         const identifier = this.parseIdentifier()
-        
-        const initializer = this.parseInitializer()
+
+        let initializer = this.parseInitializer()
 
         return {
             kind: AstKind.VariableDeclaration,
             identifier,
+            type,
             initializer,
-            binding
+            modifiers
         } as VariableDeclaration
+
 
     }
 

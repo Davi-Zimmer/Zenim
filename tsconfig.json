@@ -6,7 +6,7 @@
     "rootDir": "Private",
     "module": "esnext",
     "target": "es2020",
-    "types": [],
+    "types": [  ],
     "strict": true,
     "moduleResolution": "bundler"
   },

@@ -1,0 +1,30 @@
+// ---------------  variable declaration --------------- \\
+
+int a = -1 + 4 * 18;
+
+str b = "T";
+dbl c = .1;
+flt c = .1;
+char d = 'c';
+bool e = true;
+void f = void;
+null g = null;
+
+mut int h = 1;
+once int i = 1;
+once mut int j = 1;
+
+
+
+ 
+// --------------- pointers --------------- \\
+
+int^ a = '';
+int*** a = '';
+
+
+// --------------- Type Expression --------------- \\
+
+(5..(int?)?)* x;
+
+

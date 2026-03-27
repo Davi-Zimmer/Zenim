@@ -46,6 +46,15 @@ export class Lexer {
 
     private isAtEnd = () => this.current >= this.source.length 
 
+    private check( expected: string) {
+
+        if( this.isAtEnd() ) return false
+
+        if( this.source[ this.current ] !== expected ) return false
+
+        return true
+    }
+
     private match( expected: string ){
 
         if( this.isAtEnd() ) return false
@@ -162,9 +171,7 @@ export class Lexer {
 
         while( this.isDigit( this.peekChar() ) ) this.advance()
 
-        if( this.match( TKind.Dot ) && this.isDigit( this.peekChar() ) ){
-
-            this.advance()
+        if( this.check( TKind.Dot ) && this.isDigit( this.source[ this.current + 1 ] ) ){
 
             while( this.isDigit( this.peekChar() ) ) this.advance()
             
@@ -190,6 +197,13 @@ export class Lexer {
 
     private dotOrDouble(){
 
+        if( this.match( TKind.Dot ) ){
+
+            this.addToken( TKind.DotDot )
+            
+            return
+        }
+
         if( this.isDigit( this.peekChar() ) ){
 
             this.number()
@@ -210,7 +224,7 @@ export class Lexer {
 
             case '+' : this.addToken( TKind.Plus        ); break
             case '-' : this.addToken( TKind.Minus       ); break
-            case '*' : this.ifChar  ( TKind.Star, TKind.Star, TKind.StarStar); break
+            case '*' : this.ifChar  ( TKind.Star, TKind.Star, TKind.StarStar ); break
             case '/' : this.addToken( TKind.Slash       ); this.isLineComment(); break
             case '%' : this.addToken( TKind.Percent     ); break
             case '!' : this.addToken( TKind.Exclamation ); break
@@ -218,11 +232,11 @@ export class Lexer {
             case '=' : this.ifChar  ( TKind.Equals, TKind.Equals, TKind.EqualsEquals ); break
 
             case '(' : this.addToken( TKind.LeftParen     ); break
+            case ')' : this.addToken( TKind.RightParen    ); break
             case '[' : this.addToken( TKind.LeftBracket   ); break
-            case '{' : this.addToken( TKind.LeftBrace     ); break
-            case '}' : this.addToken( TKind.RightParen    ); break
             case ']' : this.addToken( TKind.RightBracket  ); break
-            case ')' : this.addToken( TKind.RightBrace    ); break
+            case '{' : this.addToken( TKind.LeftBrace     ); break
+            case '}' : this.addToken( TKind.RightBrace    ); break
             case "<" : this.ifChar  ( TKind.Minus, TKind.Minus, TKind.LeftArrow); break
             case ">" : this.addToken( TKind.Greater       ); break
             case ';' : this.addToken( TKind.Semicolon     ); break
@@ -261,8 +275,6 @@ export class Lexer {
     }
 
     private ifChar( base: TKind, trueCase: TKind, falseCase: TKind ){
-
-        this.advance()
 
         let kind = trueCase
 
