@@ -1,4 +1,4 @@
-import { TKind, Token } from "./Types.ts/Tokens.js"
+import { TKind, Token } from "./Types/Tokens.js"
 
 export class Lexer {
 
@@ -23,6 +23,10 @@ export class Lexer {
         bool : TKind.Bool,
         null : TKind.Null,
         void : TKind.Void,
+
+        true  : TKind.True,
+        false : TKind.False,
+        maybe : TKind.Maybe,
 
     }
 
@@ -72,7 +76,7 @@ export class Lexer {
 
     private isAlphaNumeric = ( c: string ) => this.isAlpha( c ) || this.isDigit( c )
 
-    private addToken( kind: TKind, literal?: any ) {
+    private addToken( kind: TKind, literal?: string | number | boolean ) {
         
         const lexeme = this.source.substring( this.start, this.current )
         
@@ -81,7 +85,8 @@ export class Lexer {
             lexeme,
             column : this.column - ( this.current - this.start ),
             line   : this.line,
-            length : this.current - this.start
+            length : this.current - this.start,
+            literal
         })
 
     }
@@ -154,7 +159,7 @@ export class Lexer {
     }
 
     private number(){
-        
+
         while( this.isDigit( this.peekChar() ) ) this.advance()
 
         if( this.match( TKind.Dot ) && this.isDigit( this.peekChar() ) ){
@@ -180,6 +185,20 @@ export class Lexer {
         const type = this.keywords[ text ] ?? TKind.Identifier
 
         this.addToken( type )
+
+    }
+
+    private dotOrDouble(){
+
+        if( this.isDigit( this.peekChar() ) ){
+
+            this.number()
+
+            return
+        
+        }
+
+        this.addToken( TKind.Dot )
 
     }
 
@@ -209,7 +228,7 @@ export class Lexer {
             case ';' : this.addToken( TKind.Semicolon     ); break
             case ':' : this.addToken( TKind.Colon         ); break
             case ',' : this.addToken( TKind.Comma         ); break
-            case '.' : this.addToken( TKind.Dot           ); break
+            case '.' : this.dotOrDouble()                  ; break
             case '_' : this.addToken( TKind.UnderLine     ); break
             
             case "|" : this.addToken( TKind.Or            ); break

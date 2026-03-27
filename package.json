@@ -1,6 +1,6 @@
 {
   "name": "zenim",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "main": "index.js",
   "scripts": {
     "dev": "cls && tsc && node ./.Public/Main.js"
