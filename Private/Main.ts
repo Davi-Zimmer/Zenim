@@ -1,35 +1,40 @@
+
+// import fs from 'fs'
+// import path from 'path'
+// import { fileURLToPath } from 'url'
+
 import { Lexer } from "./Lexer.js"
 import Parser from "./Parser.js"
 
-/* 
-    str b = "T";
-    dbl c = .1;
-    flt c = .1;
-    char d = 'c';
-    bool e = true;
-    void f = void;
-    null g = null;
+/*
+function loadCode( fileName: string ){
 
-    mut int a = 1;
+    const filename = fileURLToPath( import.meta.url )
+    
+    const dirname = path.dirname( filename )
+
+    const filePath = path.join( dirname, '../', 'Code', fileName )
+
+    const data = fs.readFileSync( filePath, { encoding: 'utf-8' } )
+
+    return data
+}
 */
+// loadCode('Variable Declaration.zm')
 
-const code = `
-    int a = -1 + 4 * 18;
 
-    str b = "T";
-    dbl c = .1;
-    flt c = .1;
-    char d = 'c';
-    bool e = true;
-    void f = void;
-    null g = null;
 
-    mut int h = 1;
-    once int i = 1;
-    once mut int j = 1;
-
- 
+/// pointers
+/// reference
+/// nullable
+/// category
+/// list (int?)? x;
+let code = `
+(5..(int?)?)* x;
 `
+
+
+
 
 
 
