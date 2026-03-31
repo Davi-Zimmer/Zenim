@@ -29,9 +29,9 @@ export class Scope {
 
     public declare( symbol: SymbolInfo ){
 
-        if( this.symbols.has( symbol.identfier ) ) throw new Error(`Symbol '${symbol.identfier}' already declared in this scope`)
+        if( this.symbols.has( symbol.identfier.name ) ) throw new Error(`Symbol '${symbol.identfier.name}' already declared in this scope`)
 
-        this.symbols.set( symbol.identfier, symbol )
+        this.symbols.set( symbol.identfier.name, symbol )
 
     }
 
@@ -55,7 +55,7 @@ export class Scope {
 
     public resolveLocal( identifier: string ){
         
-        this.symbols.get( identifier ) ?? null
+        return this.symbols.get( identifier ) ?? null
 
     }
 
@@ -65,7 +65,7 @@ export class Scope {
 
         if( !symbol ) throw new Error(`Cannot assign to undeclared variable '${identifier}'`)
         
-        if( HasModifier( TKind.Mut, symbol.kind.modifiers ) ) throw new Error(`Cannot assign to immutable variable '${ identifier }'`)
+        // if( HasModifier( TKind.Mut, symbol.kind.modifiers ) ) throw new Error(`Cannot assign to immutable variable '${ identifier }'`)
 
         symbol.initialized = true
 
@@ -87,7 +87,7 @@ export class ScopeStack {
 
     }
 
-    get scope(): Scope { return this.scope }
+    get scope(): Scope { return this.current }
 
 
     public push( kind: Scope['kind'] = ScopeKinds.Block ){
