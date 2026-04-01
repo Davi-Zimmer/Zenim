@@ -26,12 +26,20 @@ export enum AstKind {
 // ----------------------------------- _Statement_ ----------------------------------- \\
 
 
+export interface Span {
+    start: { line: number, column: number  }
+    end  : { line: number, column: number  }
+}
+
 export interface Statement {
     kind: AstKind
+    span: Span
+
 }
 
 export interface Expr {
     kind: AstKind
+    span: Span
 }
 
 export interface Program {
@@ -116,40 +124,47 @@ export interface MemberAccess {
     kind   : AstKind.MemberAccess
     object : Expr
     member : string
+    span   : Span
 }
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
 export type Type =
-  | { kind: "Base", name: string }
-  | { kind: "Pointer", inner: Type }
-  | { kind: "UniquePointer", inner: Type }
-  | { kind: "Array", size: number, inner: Type }
-  | { kind: "Nullable", inner: Type }
+  | {span:Span, kind: "Base", name: string }
+  | {span:Span, kind: "Pointer", inner: Type }
+  | {span:Span, kind: "UniquePointer", inner: Type }
+  | {span:Span, kind: "Array", size: number, inner: Type }
+  | {span:Span, kind: "Nullable", inner: Type }
   
 
 export interface TypedBinding {
     identifier : string
     type       : Type
     modifiers ?: Modifiers[]
-
 }
 
 export interface VariableDeclaration extends Statement {
     kind         : AstKind.VariableDeclaration 
-    identifier   : string
+    identifier   : Identifier
     type         : Type
     modifiers   ?: Modifiers[]
-    initializer ?: Expr
+    initializer ?: Expr,
+    span         : Span
 }
 
 
 // ----------------------------------- _XXX_ ----------------------------------- \\
 
-export type Modifiers = TKind.Once | TKind.Mut
+export type Modifiers = {
+    name: TKind.Once | TKind.Mut,
+    span: Span
+}
+
+
+export interface Identifier {
+    name: string,
+    span: Span
+}
 
 
 
-
-
-
-export type AST = Program | Statement
+export type AST = Program | Statement | Expr

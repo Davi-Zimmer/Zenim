@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, Identifier, Span } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -80,15 +80,18 @@ class Parser {
 
     private program() {
 
-        const ast: Statement[] = []
+        const body: Statement[] = []
 
         while( !this.isAtEnd() ){
 
-            ast.push( this.statement() )
+            body.push( this.statement() )
 
         }
 
-        return ast
+        return {
+            kind: AstKind.Program,
+            body
+        } as Program
 
     }
 
@@ -116,11 +119,21 @@ class Parser {
 
     // ----------------------------------- _Helpers_ ----------------------------------- \\
     
-    private errorLocation(){
+    private errorLocation( astNode?: Statement | Expr | Type ){
 
-        const p = this.peek()
+        if( !astNode ) {
+            
+            const p = this.peek()
 
-        return `at line: ${p.line}, Column: ${p.column} to ${p.column + p.length}`
+            return `at line: ${p.line}, column: ${p.column} to ${p.column + p.length}`
+
+        }
+
+        const start = astNode.span.start
+
+        const end   = astNode.span.end
+
+        return `at line: ${ start.line } column: ${ start.column } to line: ${ end.line } column: ${ end.column }`
 
     }
 
@@ -136,7 +149,31 @@ class Parser {
 
         if( !ident ) throw new Error(`Missing identifier ${this.errorLocation()}`)
 
-        return ident.lexeme
+        return {
+            name: ident.lexeme,
+            span: this.tokenToSpan( ident )
+        } as Identifier
+
+    }
+
+    private tokenToSpan( tk: Token ){
+        return { 
+            start: { line: tk.line,  column: tk.column },
+            end: { line: tk.line,  column: tk.column + tk.length }
+        } as Span
+    }
+
+    private getPreviosSpan(){
+
+        return  this.tokenToSpan( this.previus() )
+
+    }
+
+    private spanRange( start: { line: number, column: number }, end: { line: number, column: number } ){
+        return {
+            start,
+            end
+        } as Span 
 
     }
 
@@ -176,16 +213,17 @@ class Parser {
 
         return {
             kind: "Base",
-            name: name?.lexeme
+            name: name?.lexeme,
+            span: this.tokenToSpan( name! )
         } as Type
 
     }
 
-    private parseArrayType(): Type{
+    private parseArrayType(): Type {
 
         if( this.check( TKind.NumberLiteral ) ){
 
-            const size = this.consume( TKind.NumberLiteral )?.literal
+            const numberLiteral = this.consume( TKind.NumberLiteral )!
             
             this.consume( TKind.DotDot )
 
@@ -194,7 +232,8 @@ class Parser {
             return {
                 kind: "Array",
                 inner,
-                size 
+                size: numberLiteral?.literal,
+                span: this.tokenToSpan( numberLiteral )
             } as Type
 
         }
@@ -210,17 +249,31 @@ class Parser {
         while( true ) {
 
             if( this.match( TKind.Question ) ) {
-                type = { kind: "Nullable", inner: type }
+                type = {
+                    kind: "Nullable",
+                    inner: type,
+                    span: this.spanRange( type.span.start, this.tokenToSpan( this.previus() ).end )
+                }
+
                 continue
             }
 
             if( this.match( TKind.Star ) ) {
-                type = { kind: "Pointer", inner: type }
+                type = {
+                    kind: "Pointer",
+                    inner: type,
+                    span: this.spanRange( type.span.start, this.tokenToSpan( this.previus() ).end )
+
+                }
                 continue
             }
 
             if( this.match( TKind.Circumflex ) ) {
-                type = { kind: "UniquePointer", inner: type }
+                type = {
+                    kind: "UniquePointer",
+                    inner: type,
+                    span: this.spanRange( type.span.start, this.tokenToSpan( this.previus() ).end )
+                }
                 continue
             }
 
@@ -267,7 +320,6 @@ class Parser {
 
     }
 
-
     // ----------------------------------- _Declarations_ ----------------------------------- \\
     
     private isDeclaration(){
@@ -290,7 +342,6 @@ class Parser {
     private parseInitializer(){
 
         let initializer: undefined | Expr
-
 
         if( this.match( TKind.Equals ) ){
 
@@ -327,7 +378,11 @@ class Parser {
             identifier,
             type,
             initializer,
-            modifiers
+            modifiers,
+            span: this.spanRange( 
+                modifiers[0]?.span.start ?? type.span.start,
+                initializer?.span.end ?? identifier.span.end
+            )
         } as VariableDeclaration
 
 
@@ -355,7 +410,8 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 left: expr,
                 operator: operator.kind,
-                right
+                right,
+                span: this.spanRange( expr.span.start, right.span.end )
             } as BinaryExpression
 
         }
@@ -376,7 +432,6 @@ class Parser {
         let expr = this.logicalAnd()
 
         if( this.match( TKind.OrOr ) ){
-
             const operator = this.previus()
 
             const right = this.logicalAnd()
@@ -385,7 +440,8 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 left: expr,
                 operator: operator.kind,
-                right
+                right,
+                span: this.spanRange( expr.span.start, right.span.end )
             } as BinaryExpression
 
         }
@@ -408,7 +464,8 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 left: expr,
                 operator: operator.kind,
-                right
+                right,
+                span: this.spanRange( expr.span.start, right.span.end )
             } as BinaryExpression
 
         }
@@ -431,7 +488,8 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 left: expr,
                 operator: operator.kind,
-                right
+                right,
+                span: this.spanRange( expr.span.start, right.span.end )
             } as BinaryExpression
 
         }
@@ -454,7 +512,8 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 left: expr,
                 operator: operator.kind,
-                right
+                right,
+                span: this.spanRange( expr.span.start, right.span.end )
             } as BinaryExpression
 
         }
@@ -477,7 +536,9 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 left: expr,
                 operator: operator.kind,
-                right
+                right,
+                span: this.spanRange( expr.span.start, right.span.end )
+
             } as BinaryExpression
 
         }
@@ -500,7 +561,9 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 left: expr,
                 operator: operator.kind,
-                right
+                right,
+                span: this.spanRange( expr.span.start, right.span.end )
+
             } as BinaryExpression
 
         }
@@ -515,7 +578,7 @@ class Parser {
         
         if( this.match( TKind.StarStar ) ) {
 
-            const operator = this.previus().kind
+            const operator = this.previus()
 
             const right = this.exponent()
 
@@ -523,7 +586,9 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 right,
                 left: expr,
-                operator
+                operator: operator.kind,
+                span: this.spanRange( expr.span.start, right.span.end )
+
             } as BinaryExpression
 
         }
@@ -535,15 +600,17 @@ class Parser {
     private unary(): Expr {
 
         if( this.match( TKind.Exclamation, TKind.Minus ) ){
-           
-            const operator = this.previus().kind
+
+            const operator = this.previus()
             
             const right = this.unary()
 
             return {
                 kind: AstKind.UnaryExpression,
-                operator,
-                right
+                operator: operator.kind,
+                right,
+                span: this.spanRange( this.tokenToSpan( operator ).start, right.span.end )
+
             } as Unary
 
         }
@@ -566,14 +633,15 @@ class Parser {
 
             }
 
-            if( this.match( TKind.Dot ) &&  this.check( TKind.Identifier ) ){
+            if( this.match( TKind.Dot ) && this.check( TKind.Identifier ) ){
 
-                const name = this.parseIdentifier()
+                const ident = this.parseIdentifier()
 
                 expr = {
                     kind: AstKind.MemberAccess,
-                    member: name,
-                    object: expr
+                    member: ident.name,
+                    object: expr,
+                    span: this.spanRange( expr.span.start, ident.span.end )
                 } as MemberAccess
             
                 continue
@@ -621,7 +689,8 @@ class Parser {
     private primaryNumberLiteral() {
        return { 
             kind  : AstKind.LiteralNumber,
-            value : Number( this.previus().literal )
+            value : Number( this.previus().literal ),
+            span  : this.getPreviosSpan()
         } as LiteralNumber
 
     }
@@ -629,33 +698,38 @@ class Parser {
     private primaryStringLiteral(){
         return { 
             kind  : AstKind.LiteralString,
-            value : this.previus().literal
+            value : this.previus().literal,
+            span  : this.getPreviosSpan()
         } as LiteralString
     }
 
     private primaryCharLiteral(){
         return { 
             kind  : AstKind.LiteralChar,
-            value : this.previus().literal
+            value : this.previus().literal,
+            span  : this.getPreviosSpan()
         } as LiteralChar
     }
 
     private primaryVoidLiteral(){
         return { 
             kind  : AstKind.LiteralVoid,
+            span  : this.getPreviosSpan()
         } as LiteralVoid
     }
 
     private primaryNullLiteral(){
         return { 
             kind  : AstKind.LiteralNull,
+            span  : this.getPreviosSpan()
         } as LiteralNull
     }
 
     private primaryBoolLiteral(){
         return { 
             kind  : AstKind.LiteralBool,
-            value :  this.previus().literal
+            value :  this.previus().literal,
+            span  : this.getPreviosSpan()
         } as LiteralBool
     }
 

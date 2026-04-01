@@ -5,6 +5,7 @@
 
 import { Lexer } from "./Lexer.js"
 import Parser from "./Parser.js"
+import SemanticAnalizer from "./Semantic Analizer.js"
 
 /*
 function loadCode( fileName: string ){
@@ -23,6 +24,7 @@ function loadCode( fileName: string ){
 // loadCode('Variable Declaration.zm')
 
 
+// (5..(int?)?)* x;
 
 /// pointers
 /// reference
@@ -30,7 +32,8 @@ function loadCode( fileName: string ){
 /// category
 /// list (int?)? x;
 let code = `
-(5..(int?)?)* x;
+    int a = 0;
+    int a = 0;
 `
 
 
@@ -44,4 +47,6 @@ const tokens = Lexer.ScanTokens( code )
 
 const ast = Parser.Parse( tokens )
 
-console.log( JSON.stringify( ast, null, 3 ) )
+// console.log( JSON.stringify( ast, null, 3 ) )
+
+SemanticAnalizer.Analize( ast )
