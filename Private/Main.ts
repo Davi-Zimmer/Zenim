@@ -31,11 +31,17 @@ function loadCode( fileName: string ){
 /// nullable
 /// category
 /// list (int?)? x;
-// bool a = "1" == "1";
-// str f = 'a' + 'b';
+
 
 let code = `
-    mut once int a = 12;
+
+    int a = 0;
+    {
+    
+        int a = 0;
+
+    }
+
 `
 
 

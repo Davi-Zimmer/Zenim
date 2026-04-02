@@ -16,7 +16,7 @@ export enum AstKind {
     BinaryExpression    = "BinaryExpression",
     UnaryExpression     = "UnaryExpression",
     ExpressionStatement = "ExpressionStatement",
-
+    BlockStatement      = "BlockStatement",
 
     MemberAccess = "MemberAccess",
 
@@ -54,8 +54,13 @@ export interface ExpressionStatement extends Statement {
     expression: Expr
 }
 
+export interface BlockStatement extends Statement {
+    kind: AstKind.BlockStatement,
+    body: Statement[]
+    span: Span
+}
 
-export type Statements = Expr | Statement | Program 
+export type Statements = Expr | Statement | Program | Statement
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
 export interface LiteralNumber extends Expr {
@@ -113,8 +118,6 @@ export interface BinaryExpression extends Expr {
     operator : string
 }
 
-
-
 export interface Unary extends Expr {
     kind     : AstKind.UnaryExpression
     right    : Expr
@@ -152,7 +155,6 @@ export interface VariableDeclaration extends Statement {
     span         : Span
 }
 
-
 // ----------------------------------- _XXX_ ----------------------------------- \\
 
 export type ModifierNames = 'Once' | 'Mut'
@@ -161,7 +163,6 @@ export type Modifiers = {
     name: ModifierNames
     span: Span
 }
-
 
 export interface Identifier {
     kind: AstKind.Identifier
