@@ -31,9 +31,11 @@ function loadCode( fileName: string ){
 /// nullable
 /// category
 /// list (int?)? x;
+// bool a = "1" == "1";
+// str f = 'a' + 'b';
+
 let code = `
-    int a = 0;
-    int a = 0;
+    mut once int a = 12;
 `
 
 
@@ -47,6 +49,6 @@ const tokens = Lexer.ScanTokens( code )
 
 const ast = Parser.Parse( tokens )
 
-// console.log( JSON.stringify( ast, null, 3 ) )
+console.log( JSON.stringify( ast, null, 3 ) )
 
 SemanticAnalizer.Analize( ast )

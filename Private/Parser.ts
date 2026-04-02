@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, Identifier, Span } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, Identifier, Span, ModifierNames } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -150,8 +150,9 @@ class Parser {
         if( !ident ) throw new Error(`Missing identifier ${this.errorLocation()}`)
 
         return {
+            kind: AstKind.Identifier,
             name: ident.lexeme,
-            span: this.tokenToSpan( ident )
+            span: this.tokenToSpan( ident ),
         } as Identifier
 
     }
@@ -177,21 +178,49 @@ class Parser {
 
     }
 
-    // ----------------------------------- _Types_ ----------------------------------- \\
+    private parseModifiers(): Modifiers[] {
 
+        const modifiers: Modifiers[] = []
+
+        while( this.isModifier() && !this.isAtEnd() ){
+            
+            modifiers.push({
+              name: this.peek().kind as ModifierNames,
+              span: this.tokenToSpan(  this.peek() )  
+            })
+
+            this.advance()
+
+        }
+
+        return modifiers
+
+    }
+
+    // ----------------------------------- _Types_ ----------------------------------- \\
 
     private isModifier(){
 
         return this.check(
             TKind.Mut,
-            TKind.Once
+            TKind.Once,
         )
 
     }
 
     private consumeTypeName(){
 
-        if( this.check( TKind.Identifier, TKind.Int, TKind.Flt, TKind.Str ) ) return this.advance()
+        if( this.check(
+            TKind.Identifier,
+            TKind.Int,
+            TKind.Flt,
+            TKind.Dbl,
+            TKind.Str,
+            TKind.Char,
+            TKind.Bool,
+            TKind.Void,
+            TKind.Null,
+        )) return this.advance()
 
         throw new Error(`Expected Type ${ this.errorLocation() }`)
 
@@ -365,7 +394,13 @@ class Parser {
 
     private variableDeclaration(){
 
-        const modifiers: Modifiers[] = []
+        let modifiers: Modifiers[] = []
+
+        if( this.isModifier() ){
+
+            modifiers = this.parseModifiers()
+
+        }
 
         const type = this.parseType()
 
@@ -502,7 +537,7 @@ class Parser {
 
         let expr = this.term()
 
-        if( this.match( TKind.Greater, TKind.GreaterOrEqual, TKind.Less, TKind.LessOrEqual ) ){
+        if( this.match( TKind.Greater, TKind.GreaterOrEqual, TKind.Less, TKind.LessOrEqual, TKind.EqualsEquals ) ){
 
             const operator = this.previus()
 

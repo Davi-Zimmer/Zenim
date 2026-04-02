@@ -7,6 +7,7 @@ export enum AstKind {
     LiteralBool      = "LiteralBool",
     LiteralVoid      = "LiteralVoid",
     LiteralNull      = "LiteralNull",
+    Identifier       = "Identitier",
     // LiteralDouble    = "LiteralDouble",
     // LiteralFloat     = "LiteralFloat",
 
@@ -101,7 +102,7 @@ export interface LiteralVoid extends Expr {
 
 
 export type LiteralValue = LiteralBool | LiteralString | LiteralChar | LiteralNumber | LiteralVoid | LiteralNull | LiteralBool // | LiteralFloat | LiteralDouble
- 
+
 
 // ----------------------------------- _Expressions_ ----------------------------------- \\
 
@@ -146,21 +147,24 @@ export interface VariableDeclaration extends Statement {
     kind         : AstKind.VariableDeclaration 
     identifier   : Identifier
     type         : Type
-    modifiers   ?: Modifiers[]
-    initializer ?: Expr,
+    modifiers    : Modifiers[]
+    initializer ?: Expr
     span         : Span
 }
 
 
 // ----------------------------------- _XXX_ ----------------------------------- \\
 
+export type ModifierNames = 'Once' | 'Mut'
+
 export type Modifiers = {
-    name: TKind.Once | TKind.Mut,
+    name: ModifierNames
     span: Span
 }
 
 
 export interface Identifier {
+    kind: AstKind.Identifier
     name: string,
     span: Span
 }

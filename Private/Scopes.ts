@@ -92,7 +92,9 @@ export class ScopeStack {
 
     public push( kind: Scope['kind'] = ScopeKinds.Block ){
 
-        return new Scope( this.current, kind )
+        this.current = new Scope( this.current, kind )
+
+        return this.current
 
     }
 
