@@ -1,7 +1,7 @@
-import { Identifier, Type } from "./AST.js"
+import { LiteralIdentifier, Type } from "./AST.js"
 
 export interface SymbolInfo {
-    identfier   : Identifier 
+    identfier   : LiteralIdentifier 
     kind        : Type
     initialized : boolean
 }

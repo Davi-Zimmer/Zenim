@@ -1,23 +1,116 @@
 {
-      "kind": "VariableDeclaration", 
-      "identifier": "x",
-      "type": {
-         "kind": "Pointer",
-         "inner": {
-            "kind": "Nullable",      
-            "inner": {
-               "kind": "Array",      
-               "inner": {
-                  "kind": "Nullable",
-                  "inner": {
-                     "kind": "Base", 
-                     "name": "int"   
-                  }
+   "kind": "Program",
+   "body": [
+      {
+         "kind": "VariableDeclaration",
+         "identifier": {
+            "kind": "Identitier",      
+            "name": "a",
+            "span": {
+               "start": {
+                  "line": 3,
+                  "column": 9
                },
-               "size": 5
+               "end": {
+                  "line": 3,
+                  "column": 10
+               }
+            }
+         },
+         "type": {
+            "kind": "Base",
+            "name": "int",
+            "span": {
+               "start": {
+                  "line": 3,
+                  "column": 5
+               },
+               "end": {
+                  "line": 3,
+                  "column": 8
+               }
+            }
+         },
+         "initializer": {
+            "kind": "LiteralNumber",
+            "value": 0,
+            "span": {
+               "start": {
+                  "line": 3,
+                  "column": 13
+               },
+               "end": {
+                  "line": 3,
+                  "column": 14
+               }
+            }
+         },
+         "modifiers": [],
+         "span": {
+            "start": {
+               "line": 3,
+               "column": 5
+            },
+            "end": {
+               "line": 3,
+               "column": 14
             }
          }
       },
-      "modifiers": []
-   }
-
+      {
+         "kind": "IfElseStatement",
+         "condition": {
+            "kind": "Identitier",
+            "name": "a",
+            "span": {
+               "start": {
+                  "line": 5,
+                  "column": 9
+               },
+               "end": {
+                  "line": 5,
+                  "column": 10
+               }
+            }
+         },
+         "elseBranch": {
+            "kind": "BlockStatement",
+            "body": [],
+            "span": {
+               "start": {
+                  "line": 7,
+                  "column": 12
+               },
+               "end": {
+                  "line": 10,
+                  "column": 6
+               }
+            }
+         },
+         "thenBranch": {
+            "kind": "BlockStatement",
+            "body": [],
+            "span": {
+               "start": {
+                  "line": 5,
+                  "column": 13
+               },
+               "end": {
+                  "line": 7,
+                  "column": 6
+               }
+            }
+         },
+         "span": {
+            "start": {
+               "line": 5,
+               "column": 5
+            },
+            "end": {
+               "line": 10,
+               "column": 6
+            }
+         }
+      }
+   ]
+}

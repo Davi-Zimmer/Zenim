@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, Identifier, Span, ModifierNames, BlockStatement } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -97,6 +97,8 @@ class Parser {
 
     private statement(){
 
+        if( this.check( TKind.If ) ) return this.ifStatement()
+
         if( this.isDeclaration() ) return this.declarations()
 
         if( this.check( TKind.LeftBrace ) ) return this.blockStatement()
@@ -152,10 +154,10 @@ class Parser {
         if( !ident ) throw new Error(`Missing identifier ${this.errorLocation()}`)
 
         return {
-            kind: AstKind.Identifier,
+            kind: AstKind.LiteralIdentifier,
             name: ident.lexeme,
             span: this.tokenToSpan( ident ),
-        } as Identifier
+        } as LiteralIdentifier
 
     }
 
@@ -452,6 +454,36 @@ class Parser {
 
     }
 
+    private ifStatement() : IfElseStatement {
+
+        let startSpan = this.tokenToSpan( this.peek() )
+
+        this.consume( TKind.If )
+
+        this.consume( TKind.LeftParen )
+
+        const expr = this.expression()
+
+        this.consume( TKind.RightParen )
+
+        const thenBranch = this.statement()
+
+        let elseBranch: Statement | undefined 
+
+        if( this.match( TKind.Else ) ) elseBranch = this.statement()
+
+        let endSpan = elseBranch?.span ?? thenBranch.span
+
+        return {
+            kind: AstKind.IfElseStatement,
+            condition: expr,
+            elseBranch,
+            thenBranch,
+            span: this.spanRange( startSpan.start, endSpan.end )
+        }
+
+    }
+
     // ----------------------------------- _Expressions_ ----------------------------------- \\
 
     private expression(){
@@ -738,6 +770,8 @@ class Parser {
 
         if( this.match( TKind.True, TKind.False, TKind.Maybe ) ) return this.primaryBoolLiteral()
         
+        if( this.match( TKind.Identifier ) ) return this.primaryIdentifier()
+
         throw new Error(`Expected Expression but it came "${ this.peek().kind }" ${this.errorLocation()}`)
         
     }
@@ -795,6 +829,19 @@ class Parser {
             value :  this.previus().literal,
             span  : this.getPreviosSpan()
         } as LiteralBool
+    }
+
+    private primaryIdentifier(){
+
+        const p = this.previus()
+
+        return {
+            kind: AstKind.LiteralIdentifier,
+            name: p.lexeme,
+            span: this.tokenToSpan( p )
+
+        } as LiteralIdentifier
+
     }
 
 }

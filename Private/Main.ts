@@ -35,10 +35,13 @@ function loadCode( fileName: string ){
 
 let code = `
 
-    int a = 0;
-    {
+
+    if( maybe ) {
     
-        int a = 0;
+        int? a;
+    
+    } else {
+
 
     }
 
