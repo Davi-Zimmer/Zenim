@@ -79,8 +79,8 @@ export enum TKind {
 
     // Reserved words
     If      = "If",
-    Else    = "Else",
-
+    Else    = "Else", 
+    While   = "While",
         
 }
 

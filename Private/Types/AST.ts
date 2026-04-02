@@ -18,8 +18,10 @@ export enum AstKind {
     ExpressionStatement = "ExpressionStatement",
     BlockStatement      = "BlockStatement",
     IfElseStatement     = "IfElseStatement",
-    MemberAccess        = "MemberAccess",
+    WhileStatement      = "WhileStatement",
 
+    
+    MemberAccess        = "MemberAccess",
     VariableDeclaration = "VariableDeclaration",
 
 }
@@ -37,12 +39,12 @@ export interface Statement {
 
 }
 
-export interface Expr {
+export interface Expr extends Statement {
     kind: AstKind
     span: Span
 }
 
-export interface Program {
+export interface Program extends Statement {
     kind: AstKind.Program
     body: Statement[]
 
@@ -67,7 +69,11 @@ export interface IfElseStatement extends Statement {
     span       : Span
 }
 
-export type Statements = Expr | Statement | Program | Statement | IfElseStatement
+export interface WhileStatement extends Statement {
+    kind: AstKind.WhileStatement
+    condition: Expr
+    body: Statement
+}
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
 

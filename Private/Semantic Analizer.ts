@@ -1,6 +1,5 @@
-import { addEmitHelpers, Modifier } from "typescript"
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, Statement, LiteralIdentifier, Span, AstKind, LiteralValue, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, Statement, LiteralIdentifier, Span, AstKind, LiteralValue, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement } from "./Types/AST.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl'
 
@@ -406,6 +405,24 @@ class SemanticAnalizer {
 
         if( node.elseBranch ) this.visit( node.elseBranch )
 
+
+    }
+
+    private whileStatement( node: WhileStatement ){
+
+        const type = this.visit( node.condition )
+
+        if( !this.baseIs( type?.base, 'bool' ) ){
+
+            throw new Error(`Condition must be boolean ${this.errorLocation( node.condition.span )}`)
+
+        }
+
+        this.scopeStack.push( ScopeKinds.Loop )
+
+        this.visit( node.body )
+
+        this.scopeStack.pop()
 
     }
 

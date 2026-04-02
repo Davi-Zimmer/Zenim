@@ -30,6 +30,7 @@ export class Lexer {
 
         if    : TKind.If,
         else  : TKind.Else,
+        while : TKind.While
 
     }
 

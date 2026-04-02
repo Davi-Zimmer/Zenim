@@ -32,17 +32,12 @@ function loadCode( fileName: string ){
 /// category
 /// list (int?)? x;
 
+// while( true ){}
 
 let code = `
-
-
-    if( maybe ) {
     
-        int? a;
+    while( true ){
     
-    } else {
-
-
     }
 
 `
