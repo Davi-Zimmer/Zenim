@@ -61,6 +61,7 @@ export enum TKind {
 
     Mut = "Mut",
     Once = "Once",
+    
     Int = "Int",
     Flt = "Flt",
     Str = "Str",
