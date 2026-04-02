@@ -35,10 +35,9 @@ function loadCode( fileName: string ){
 // while( true ){}
 
 let code = `
+    do {
     
-    while( true ){
-    
-    }
+    } while ( true );
 
 `
 

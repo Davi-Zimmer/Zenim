@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -100,6 +100,8 @@ class Parser {
         if( this.check( TKind.If ) ) return this.ifStatement()
 
         if( this.check( TKind.While ) ) return this.whileStatement()
+
+        if( this.check( TKind.Do ) ) return this.doWhileStatement()
 
         if( this.isDeclaration() ) return this.declarations()
 
@@ -502,6 +504,33 @@ class Parser {
 
         return {
             kind: AstKind.WhileStatement,
+            body: statement,
+            condition: expr,
+            span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
+        }
+
+    }
+
+    private doWhileStatement(): DoWhileStatement {
+        
+        const spanStart = this.tokenToSpan( this.peek() )
+
+        this.consume( TKind.Do )
+
+        const statement = this.statement()
+        
+        this.consume( TKind.While )
+
+        this.consume( TKind.LeftParen )
+
+        const expr = this.expression()
+
+        this.consume( TKind.RightParen )
+
+        this.consume( TKind.Semicolon )
+
+        return {
+            kind: AstKind.DoWhileStatement,
             body: statement,
             condition: expr,
             span: this.spanRange( spanStart.start, this.getPreviosSpan().end )

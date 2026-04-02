@@ -81,6 +81,7 @@ export enum TKind {
     If      = "If",
     Else    = "Else", 
     While   = "While",
+    Do      = "Do",
         
 }
 

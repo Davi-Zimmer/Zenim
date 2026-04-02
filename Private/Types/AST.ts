@@ -19,6 +19,7 @@ export enum AstKind {
     BlockStatement      = "BlockStatement",
     IfElseStatement     = "IfElseStatement",
     WhileStatement      = "WhileStatement",
+    DoWhileStatement    = "DoWhileStatement",
 
     
     MemberAccess        = "MemberAccess",
@@ -73,6 +74,13 @@ export interface WhileStatement extends Statement {
     kind: AstKind.WhileStatement
     condition: Expr
     body: Statement
+}
+
+export interface DoWhileStatement extends Statement {
+    kind: AstKind.DoWhileStatement
+    body: Statement
+    condition: Expr
+
 }
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
