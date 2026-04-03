@@ -49,3 +49,17 @@ if( maybe ) {
 
 
 }
+
+
+
+
+for( int x in 0 -> 10, 2 ){
+    
+}
+
+
+..(bool) booleans = [ true, false ];
+
+for( bool b of booleans ){
+
+}

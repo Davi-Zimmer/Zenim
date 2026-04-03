@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -96,6 +96,8 @@ class Parser {
     }
 
     private statement(){
+
+        if( this.check( TKind.Break ) ) return this.breakStatement()
 
         if( this.check( TKind.If ) ) return this.ifStatement()
 
@@ -626,6 +628,19 @@ class Parser {
             span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
         }
 
+
+    }
+
+    private breakStatement(): BreakStatement {
+
+        this.consume( TKind.Break )
+        
+        this.consume( TKind.Semicolon )
+
+        return {
+            kind: AstKind.BreakStatement,
+            span: this.getPreviosSpan()
+        }
 
     }
 

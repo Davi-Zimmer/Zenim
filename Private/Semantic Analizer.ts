@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement } from "./Types/AST.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
 
@@ -697,6 +697,16 @@ class SemanticAnalizer {
         const scope = this.scopeStack.scope
 
         node.forKind === 'in' ? this.analyzeForIn( node, scope ) : this.analyzeForOf( node, scope )
+
+    }
+
+    private breakStatement( node: BreakStatement ) {
+
+        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
+            
+            throw new Error(`Cannot use 'break' outside a loop`)
+
+        }
 
     }
 
