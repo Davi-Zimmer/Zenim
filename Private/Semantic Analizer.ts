@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement } from "./Types/AST.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
 
@@ -627,7 +627,11 @@ class SemanticAnalizer {
 
     private blockStatement( node: BlockStatement ){
 
-        this.scopeStack.push( ScopeKinds.Block )
+        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
+
+            this.scopeStack.push( ScopeKinds.Block )
+
+        }
 
         for( const stmt of node.body ){
 
@@ -635,8 +639,12 @@ class SemanticAnalizer {
 
         }
 
-        this.scopeStack.pop()
+        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
 
+            this.scopeStack.pop()
+
+        }
+        
     }
 
     private ifElseStatement( node: IfElseStatement ){
@@ -662,7 +670,7 @@ class SemanticAnalizer {
 
         if( !this.baseIs( type?.base, 'bool' ) ){
 
-            throw new Error(`Condition must be boolean ${this.errorLocation( node.condition.span )}`)
+            throw new Error(`Condition must be boolean ${ this.errorLocation( node.condition.span ) }`)
 
         }
 
@@ -705,6 +713,16 @@ class SemanticAnalizer {
         if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
             
             throw new Error(`Cannot use 'break' outside a loop`)
+
+        }
+
+    }
+
+    private nextStatement( node: NextStatement ){
+
+        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
+            
+            throw new Error(`Cannot use 'next' outside a loop`)
 
         }
 

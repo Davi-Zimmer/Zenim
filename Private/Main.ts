@@ -36,7 +36,10 @@ function loadCode( fileName: string ){
 // ..(..int) test = [ [] ]; // da erro ainda
 
 let code = `
-    break;
+  
+    while( true ) break;
+
+
 
 `
 
