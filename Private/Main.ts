@@ -33,11 +33,16 @@ function loadCode( fileName: string ){
 /// list (int?)? x;
 
 // 1..(bool?) list = [ true, null ];
+// 3..bool b = [ true, false, maybe ];
+// ..(..int) test = [ [] ]; // da erro ainda
+// for( int x in 0 -> 10, 2 ){}
 
 let code = `
-    
-    3..bool b = [ true, false, maybe ];
+    ..(bool) booleans = [ true, false ];
 
+    for( bool? b of booleans ){
+
+    }
 
 `
 

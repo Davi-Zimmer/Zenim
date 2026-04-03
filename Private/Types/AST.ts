@@ -8,8 +8,13 @@ export enum AstKind {
     LiteralVoid       = "LiteralVoid",
     LiteralNull       = "LiteralNull",
     LiteralIdentifier = "LiteralIdentifier",
+    LiteralList       = "LiteralList",
+
     // LiteralDouble    = "LiteralDouble",
     // LiteralFloat     = "LiteralFloat",
+
+    RangeExpression   = "RangeExpression",
+
 
     Statement           = "Statement",
     Program             = "Program",
@@ -20,7 +25,7 @@ export enum AstKind {
     IfElseStatement     = "IfElseStatement",
     WhileStatement      = "WhileStatement",
     DoWhileStatement    = "DoWhileStatement",
-    LiteralList         = "LiteralList",
+    ForStatement        = "ForStatement",
 
     
     MemberAccess        = "MemberAccess",
@@ -82,6 +87,17 @@ export interface DoWhileStatement extends Statement {
     body: Statement
     condition: Expr
 
+}
+
+export interface ForStatement extends Statement {
+    kind       : AstKind.ForStatement
+    forKind    : 'in' | 'of'
+    identifier : LiteralIdentifier
+    type       : Type
+    
+    iterable   : Expr
+    step      ?: Expr
+    body       : Statement 
 }
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
@@ -159,6 +175,12 @@ export interface Unary extends Expr {
     operator : string
 }
 
+export interface RangeExpression extends Expr {
+    kind  : AstKind.RangeExpression
+    start : Expr
+    end   : Expr
+    span  : Span
+}
 
 export interface MemberAccess {
     kind   : AstKind.MemberAccess

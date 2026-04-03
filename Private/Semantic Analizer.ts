@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression } from "./Types/AST.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
 
@@ -452,6 +452,109 @@ class SemanticAnalizer {
     }
     */
 
+    private isInt( e: Expr ){
+        return this.analyzeExpression( e, this.scopeStack.scope ).base === 'int'
+    }
+
+    private isList( e: Expr ){
+
+        return this.analyzeExpression( e, this.scopeStack.scope ).base === 'list'
+
+    }
+
+    private analyzeForIn( node: ForStatement, scope: Scope ){
+
+        const type = this.resolveType( node.type )
+
+        if( type.base !== 'int' ) {
+
+            throw new Error(`'For in' type must be int, but it came ${ type.base } ${ this.errorLocation( node.type.span ) } `)
+
+        }
+
+        if( type.nullable ) {
+
+            throw new Error(`'For in' type cannot be nullable ${ this.errorLocation( type.span ) }`)
+
+        }
+        
+        // adicionar restrição pra ponteiros tambem
+
+        if( node.iterable.kind === AstKind.RangeExpression ){
+
+            const range = node.iterable as RangeExpression
+
+            if( !this.isInt( range.start ) || !this.isInt( range.end ) ){
+
+                throw new Error(`Range expression must be 'int -> int' ${ this.errorLocation( node.iterable.span ) }`)
+
+            }
+
+        } else {
+
+            throw new Error(`'For in' iterable must be an range`)
+
+        }
+
+        if( node.step ){
+
+            if( !this.isInt( node.step ) ){
+
+                throw new Error(`Step must be int ${ this.errorLocation( node.step.span ) }`)
+
+            }
+
+        }
+
+    }
+
+    private analyzeForOf( node: ForStatement, scope: Scope ) {
+        
+        if( node.iterable.kind === AstKind.RangeExpression ) {
+
+            throw new Error(`In 'For of', range cannot be used ${ this.errorLocation( node.iterable.span ) }`)
+
+        }
+
+        const iterable = this.analyzeExpression( node.iterable , this.scopeStack.scope )
+
+        if( iterable.base !== 'list' ) {
+
+            throw new Error(`Iterable must be a list ${ this.errorLocation( node.iterable.span ) }`)
+
+        }
+
+        const type = this.resolveType( node.type )
+
+        if( iterable.inner.base !== type.base ){
+            
+            throw new Error(`The declared type in the loop is not the same as the type in the list ${ this.errorLocation( type.span ) }`)
+
+        }
+
+        if( type.nullable !== iterable.inner.nullable ){
+
+            if( type.nullable ){
+
+                throw new Error(`The iterable list is not nullable, but the variable is ${ this.errorLocation( type.span ) }`)
+            
+            }
+            
+            throw new Error(`The iterable list is nullable, but the variable isn't ${ this.errorLocation( type.span ) }`)
+
+        }
+
+        if( node.step ){
+
+            if( !this.isInt( node.step ) ){
+
+                throw new Error(`Step must be int ${ this.errorLocation( node.step.span ) }`)
+
+            }
+
+        }
+
+    }
 
     // ------------------------------------------ Analisys ------------------------------------------ \\
 
@@ -586,6 +689,14 @@ class SemanticAnalizer {
         this.visit( node.body )
 
         this.scopeStack.pop()
+
+    }
+
+    private forStatement( node: ForStatement ){
+
+        const scope = this.scopeStack.scope
+
+        node.forKind === 'in' ? this.analyzeForIn( node, scope ) : this.analyzeForOf( node, scope )
 
     }
 
