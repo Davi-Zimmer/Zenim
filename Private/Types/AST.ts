@@ -20,6 +20,7 @@ export enum AstKind {
     IfElseStatement     = "IfElseStatement",
     WhileStatement      = "WhileStatement",
     DoWhileStatement    = "DoWhileStatement",
+    LiteralList         = "LiteralList",
 
     
     MemberAccess        = "MemberAccess",
@@ -133,6 +134,12 @@ export interface LiteralIdentifier extends Expr {
     span: Span
 }
 
+export interface LiteralList extends Expr {
+    kind: AstKind.LiteralList
+    list: Expr[]
+    size: number
+}
+
 
 export type LiteralValue = LiteralBool | LiteralString | LiteralChar | LiteralNumber | LiteralVoid | LiteralNull | LiteralBool // | LiteralFloat | LiteralDouble
 
@@ -152,12 +159,14 @@ export interface Unary extends Expr {
     operator : string
 }
 
+
 export interface MemberAccess {
     kind   : AstKind.MemberAccess
     object : Expr
     member : string
     span   : Span
 }
+
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
 export type Type =

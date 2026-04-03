@@ -1,10 +1,20 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, Statement, LiteralIdentifier, Span, AstKind, LiteralValue, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList } from "./Types/AST.js"
 
-type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl'
+type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
 
-type sla = { base: baseType | null, nullable: boolean, span: Span }
-
+type sla =
+    | { base: 'str'  | null, nullable: boolean, span: Span }
+    | { base: 'bool' | null, nullable: boolean, span: Span }
+    | { base: 'char' | null, nullable: boolean, span: Span }
+    | { base: 'void' | null, nullable: boolean, span: Span }
+    | { base: 'null' | null, nullable: boolean, span: Span }
+    | { base: 'int'  | null, nullable: boolean, span: Span }
+    | { base: 'dbl'  | null, nullable: boolean, span: Span }
+    | { base: 'flt'  | null, nullable: boolean, span: Span }
+    | { base: 'any'  | null, nullable: boolean, span: Span }
+    | { base: 'list' | null, nullable: boolean, span: Span, inner: sla, size: number }
+  
 
 class SemanticAnalizer {
 
@@ -76,24 +86,32 @@ class SemanticAnalizer {
     }
 
     private resolveType( node: Type ): sla {
-        
+    
         switch( node.kind ){
             
-            case "Base": return { 
-                base: node.name as baseType,
+            case 'Base': return { 
+                base: node.name,
                 nullable: false,
                 span: node.span
-            }
+            } as sla
 
-            case "Nullable": {
+            case 'Nullable': {
                 const inner = this.resolveType( node.inner )
 
                 return {
                     ...inner,
                     nullable: true,
                     span: node.span
-
                 }
+
+            }
+
+            case 'Array': return {
+                base: 'list',
+                nullable: false,
+                span: node.span,
+                inner: this.resolveType( node.inner ),
+                size: node.size
             }
 
             default: return {
@@ -118,7 +136,8 @@ class SemanticAnalizer {
             type === 'char' ||
             type === 'bool' ||
             type === 'void' ||
-            type === 'null' 
+            type === 'null' ||
+            type === 'list'
         )
 
     }
@@ -142,10 +161,10 @@ class SemanticAnalizer {
     private resolveComparison( left: sla, right: sla ): sla {
 
         const a =  {
-            base: "bool" as baseType,
+            base: "bool",
             nullable: false,
             span: this.spanRange( left.span, right.span )
-        }
+        } as sla
 
         if( left.base === 'null' || right.base === 'null' ) return a 
         if( left.base === 'void' || right.base === 'void' ) return a 
@@ -240,7 +259,8 @@ class SemanticAnalizer {
 
     }
 
-    private analyzeExpression( node: Expr | LiteralIdentifier , scope: Scope ): sla {
+    private analyzeExpression( node: Expr , scope: Scope ): sla {
+
 
         switch( node.kind ) {
 
@@ -270,7 +290,7 @@ class SemanticAnalizer {
 
             case AstKind.LiteralNull: return {
                 base: 'null',
-                nullable: false,
+                nullable: true,
                 span: node.span
             }
 
@@ -279,6 +299,8 @@ class SemanticAnalizer {
                 nullable: false,
                 span: node.span
             }
+
+            case AstKind.LiteralList: return this.analyzeList( node as LiteralList, scope )
 
             case AstKind.BinaryExpression: return this.anayizeBinary( ( node as BinaryExpression ), scope )
 
@@ -306,6 +328,96 @@ class SemanticAnalizer {
 
     }
 
+    private isAssignable( a: sla, b: sla ): boolean {
+
+        if( b.base === 'any' ) return true
+        
+        if( a.base === null ) return a.nullable 
+        
+        if( a.base !== b.base ) return false
+
+        if( a.base === 'list' && b.base === 'list' ) return this.isAssignable( a.inner, b.inner )
+        
+        return true
+
+    }
+
+    private mergeTypes( a: sla, b: sla ): sla {
+
+        if( a.base === b.base ) {
+
+            if( a.base === 'list'){
+                return {
+                    base: a.base,
+                    nullable: a.nullable || b.nullable,
+                    span: a.span,
+                    size: a.size
+                } as sla
+            }
+
+            return {
+                base: a.base,
+                nullable: a.nullable || b.nullable,
+                span: a.span
+            } as sla
+        }
+
+        if( a.base === 'null' ) return {
+            ...b,
+            nullable: true
+        }
+
+        if( b.base === 'null' ) return {
+            ...a,
+            nullable: true
+        }
+
+        const nullable = a.nullable || b.nullable ? 'nullable ' : ''
+
+        throw new Error(`Type ${ b.base } differs in ${ nullable }literal ${ a.base } ${ this.errorLocation( b.span ) }`)
+    
+    }
+
+    private analyzeList( node: LiteralList, scope: Scope ) {
+
+        if( node.size === 0 ) {
+
+            return {
+                base: 'list',
+                nullable: false,
+                span: node.span,
+                size: node.size,
+                inner: {
+                    base: 'any',
+                    nullable: false,
+                    span: node.span,
+                    size: 0
+                    
+                } as sla
+
+            } as sla
+
+        }
+
+        let currentType = this.analyzeExpression( node.list[ 0 ], scope )
+
+        for (let i = 1; i < node.list.length; i++) {
+
+            const nextType = this.analyzeExpression( node.list[ i ], scope )
+
+            currentType = this.mergeTypes( currentType, nextType )
+        }
+
+        return {
+            base: 'list',
+            inner: currentType,
+            nullable: false,
+            span: node.span,
+            size: node.size
+        } as sla
+
+    }
+
     private checkModifiers( modifiers: Modifiers[], scope: Scope ) {
 
         return this.isModifierAlloed( scope.kind, modifiers )
@@ -325,6 +437,21 @@ class SemanticAnalizer {
         return false
 
     }
+    /*
+    private convertDataToList( type: sla ){
+
+        if( type.base !== 'list') throw new Error(`TYPE IS NOT LIST`)
+
+        // const listSize = type.
+        
+        const nullable = type.nullable ? '?' : '' 
+
+
+        return `..${type.inner.base}${nullable}`
+
+    }
+    */
+
 
     // ------------------------------------------ Analisys ------------------------------------------ \\
 
@@ -363,6 +490,24 @@ class SemanticAnalizer {
             const initializer = this.analyzeExpression( node.initializer, this.scopeStack.scope )
 
             if( initializer.base !== type.base ) throw new Error(`Type '${type.base}' is not compatible with '${initializer.base}' ${this.errorLocation( node.span )}`)
+
+            if( initializer.base === 'list' && type.base === 'list' ){
+
+                if( !this.isAssignable( type.inner, initializer.inner ) ) throw new Error(
+
+                    `Declared list type '${ type.inner.base }' is not compatible with list type '${ initializer.inner.base }' ${this.errorLocation( initializer.span )}`
+                
+                )
+
+                if( initializer.size > type.size ){
+
+                    throw new Error(`Too many itens in list, maximum is ${ type.size } but ${ initializer.size } was assigned ${ this.errorLocation( initializer.span ) }`)
+
+                }
+
+
+            } 
+
 
         }
 
@@ -441,7 +586,7 @@ class SemanticAnalizer {
         this.visit( node.body )
 
         this.scopeStack.pop()
-        
+
     }
 
     // ----------------------------------- Literals ----------------------------------- \\

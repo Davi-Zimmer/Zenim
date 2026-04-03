@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -258,19 +258,26 @@ class Parser {
 
     private parseArrayType(): Type {
 
-        if( this.check( TKind.NumberLiteral ) ){
+        if( this.check( TKind.NumberLiteral ) || this.check( TKind.DotDot ) ){
 
-            const numberLiteral = this.consume( TKind.NumberLiteral )!
-            
-            this.consume( TKind.DotDot )
+            let listStart: Token | undefined
+
+            if( this.check( TKind.NumberLiteral ) ) {
+
+                listStart = this.consume( TKind.NumberLiteral )!
+
+            }
+
+            if( !listStart ) listStart = this.consume( TKind.DotDot )!
+            else this.consume( TKind.DotDot )
 
             const inner = this.parseArrayType()
 
             return {
                 kind: "Array",
                 inner,
-                size: numberLiteral?.literal,
-                span: this.tokenToSpan( numberLiteral )
+                size: listStart?.literal,
+                span: this.tokenToSpan( listStart )
             } as Type
 
         }
@@ -383,7 +390,40 @@ class Parser {
 
         if( this.match( TKind.Equals ) ){
 
-            initializer = this.expression()
+            if( this.match( TKind.LeftBracket ) ){
+    
+                const array: Expr[] = []
+
+                const spanStart = this.getPreviosSpan()
+
+                while( !this.check( TKind.RightBracket ) && ! this.isAtEnd() ){
+
+                    array.push( this.expression() )
+
+                    if( this.check( TKind.Comma ) ) {
+
+                        this.consume( TKind.Comma )
+
+                        continue
+
+                    }
+
+                }
+
+                this.consume( TKind.RightBracket )
+
+                initializer = {
+                    kind: AstKind.LiteralList,
+                    list: array,
+                    size: array.length,
+                    span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
+                } as LiteralList
+
+            } else {
+
+                initializer = this.expression()
+            
+            }
 
         }
 
@@ -818,9 +858,9 @@ class Parser {
 
         if( this.match( TKind.CharLiteral   ) ) return this.primaryCharLiteral()
 
-        if( this.match( TKind.Void ) ) return this.primaryVoidLiteral()
+        if( this.match( TKind.Void          ) ) return this.primaryVoidLiteral()
 
-        if( this.match( TKind.Null ) ) return this.primaryNullLiteral()
+        if( this.match( TKind.Null          ) ) return this.primaryNullLiteral()
 
         if( this.match( TKind.True, TKind.False, TKind.Maybe ) ) return this.primaryBoolLiteral()
         
