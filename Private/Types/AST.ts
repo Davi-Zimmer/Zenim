@@ -26,6 +26,7 @@ export enum AstKind {
     WhileStatement      = "WhileStatement",
     DoWhileStatement    = "DoWhileStatement",
     ForStatement        = "ForStatement",
+    BreakStatement      = "BreakStatement",
 
     
     MemberAccess        = "MemberAccess",
@@ -98,6 +99,11 @@ export interface ForStatement extends Statement {
     iterable   : Expr
     step      ?: Expr
     body       : Statement 
+}
+
+export interface BreakStatement extends Statement {
+    kind: AstKind.BreakStatement
+    span: Span
 }
 
 // ----------------------------------- _Literals_ ----------------------------------- \\

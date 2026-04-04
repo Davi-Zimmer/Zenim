@@ -2,7 +2,6 @@
 // import fs from 'fs'
 // import path from 'path'
 // import { fileURLToPath } from 'url'
-
 import { Lexer } from "./Lexer.js"
 import Parser from "./Parser.js"
 import SemanticAnalizer from "./Semantic Analizer.js"
@@ -35,19 +34,11 @@ function loadCode( fileName: string ){
 // 1..(bool?) list = [ true, null ];
 // 3..bool b = [ true, false, maybe ];
 // ..(..int) test = [ [] ]; // da erro ainda
-// for( int x in 0 -> 10, 2 ){}
 
 let code = `
-    ..(bool) booleans = [ true, false ];
-
-    for( bool? b of booleans ){
-
-    }
+    break;
 
 `
-
-
-
 
 
 

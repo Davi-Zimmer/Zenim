@@ -85,6 +85,7 @@ export enum TKind {
     For     = "For",
     In      = "In",
     Of      = "Of",
+    Break   = "Break",
         
 }
 
