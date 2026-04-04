@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue } from "./Types/AST.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
 
@@ -611,7 +611,6 @@ class SemanticAnalizer {
 
             } 
 
-
         }
 
         this.checkModifiers( node.modifiers, this.scopeStack.scope ) 
@@ -627,11 +626,7 @@ class SemanticAnalizer {
 
     private blockStatement( node: BlockStatement ){
 
-        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
-
-            this.scopeStack.push( ScopeKinds.Block )
-
-        }
+        this.scopeStack.push( ScopeKinds.Block )
 
         for( const stmt of node.body ){
 
@@ -639,12 +634,8 @@ class SemanticAnalizer {
 
         }
 
-        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
+        this.scopeStack.pop()
 
-            this.scopeStack.pop()
-
-        }
-        
     }
 
     private ifElseStatement( node: IfElseStatement ){
@@ -710,9 +701,9 @@ class SemanticAnalizer {
 
     private breakStatement( node: BreakStatement ) {
 
-        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
+        if( !this.scopeStack.canbreak() ){
             
-            throw new Error(`Cannot use 'break' outside a loop`)
+            throw new Error(`Cannot use 'break' outside a loop or match`)
 
         }
 
@@ -720,11 +711,57 @@ class SemanticAnalizer {
 
     private nextStatement( node: NextStatement ){
 
-        if( this.scopeStack.scope.kind !== ScopeKinds.Loop ){
+        if( !this.scopeStack.canNext() ){
             
             throw new Error(`Cannot use 'next' outside a loop`)
 
         }
+
+    }
+
+    private matchClause( node: MatchClause ){
+   
+        this.visit( node.body )
+
+    }
+
+    private matchStatement( node: MatchStatement ){
+
+        const condType = this.analyzeExpression( node.condition, this.scopeStack.scope )
+
+        this.scopeStack.push( ScopeKinds.Match )
+
+        const usedValues = new Set<any>()
+
+        for( const clause of node.clauses ){
+
+            for( const expr of clause.expressions ){
+
+                const exprType = this.analyzeExpression( expr, this.scopeStack.scope )
+
+                if( usedValues.has( ( expr as LiteralValue ).value ) ){
+
+                    throw new Error(`The value '${ ( expr as LiteralValue ).value }' has already been used ${ this.errorLocation( expr.span )}`)
+
+                }
+
+                if( !this.isAssignable( condType, exprType ) ){
+
+                    throw new Error(`Match condition(${ condType.base }) is not assignable with '${ exprType.base }' ${ this.errorLocation( exprType.span ) }`)
+
+                }
+
+                this.visit( expr )
+                
+                usedValues.add( ( expr as LiteralValue ).value )
+
+            }
+
+            this.matchClause( clause )
+
+        }
+
+        this.scopeStack.pop()
 
     }
 

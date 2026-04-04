@@ -28,6 +28,8 @@ export enum AstKind {
     ForStatement        = "ForStatement",
     BreakStatement      = "BreakStatement",
     NextStatement       = "NextStatement",
+    MatchClause         = "MatchClause",
+    MatchStatement      = "MatchStatement",
 
     
     MemberAccess        = "MemberAccess",
@@ -112,6 +114,22 @@ export interface NextStatement extends Statement {
     span: Span
 }
 
+export interface MatchClause extends Statement {
+    kind        : AstKind.MatchClause
+    expressions : Expr[]
+    body        : Statement
+
+}
+
+export interface MatchStatement extends Statement {
+    kind: AstKind.MatchStatement
+    span: Span
+
+    condition : Expr
+    clauses   : MatchClause[]
+    else      : Statement | undefined
+
+}
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
 

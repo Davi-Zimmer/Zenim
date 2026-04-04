@@ -63,3 +63,6 @@ for( int x in 0 -> 10, 2 ){
 for( bool b of booleans ){
 
 }
+
+
+while( true ) break;

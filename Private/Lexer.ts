@@ -37,6 +37,7 @@ export class Lexer {
         of    : TKind.Of,
         break : TKind.Break,
         next  : TKind.Next,
+        match : TKind.Match,
 
     }
 
