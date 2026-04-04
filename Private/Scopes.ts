@@ -9,7 +9,8 @@ export enum ScopeKinds {
     Function = "Function",
     Class    = "Class",
     Model    = "Model",
-    Loop     = "Loop"
+    Loop     = "Loop",
+    Match    = "Match",
 }
 
 export class Scope {
@@ -73,6 +74,20 @@ export class Scope {
 
     }
 
+    public isKind( ...kinds: ScopeKinds[] ){
+
+        for( const kind of kinds ){
+            
+            console.log( this.kind, kind )
+
+            if( this.kind === kind ) return true
+
+        }
+
+        return false
+
+    }
+
 
 }
 
@@ -88,7 +103,6 @@ export class ScopeStack {
     }
 
     get scope(): Scope { return this.current }
-
 
     public push( kind: Scope['kind'] = ScopeKinds.Block ){
 
@@ -106,6 +120,47 @@ export class ScopeStack {
         if( !this.current.parent ) throw new Error("Cannot pop global scope")
 
         this.current = this.current.parent
+
+    }
+
+    public canbreak(){
+
+        let scope: Scope | null = this.scope
+
+        while( scope ){
+
+            
+            if( scope.isKind( ScopeKinds.Loop, ScopeKinds.Match ) ){
+                
+                return true
+
+            }
+
+            scope = scope.parent
+
+        }
+
+        return false
+
+    }
+
+    public canNext(){
+
+        let scope: Scope | null = this.scope
+
+        while( scope ){
+
+            if( scope.isKind( ScopeKinds.Loop ) ){
+
+                return true
+
+            }
+
+            scope = scope.parent
+
+        }
+
+        return false
 
     }
 

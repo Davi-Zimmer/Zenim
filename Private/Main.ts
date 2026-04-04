@@ -37,9 +37,17 @@ function loadCode( fileName: string ){
 
 let code = `
   
-    while( true ) break;
+    match( 1 ){
 
+        1: {};
 
+        2,3,4,5: {};
+
+        else {
+            
+        };
+
+    }
 
 `
 

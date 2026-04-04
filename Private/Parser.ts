@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -96,6 +96,8 @@ class Parser {
     }
 
     private statement(){
+
+        if( this.check( TKind.Match ) ) return this.matchStatement()
 
         if( this.check( TKind.Break ) ) return this.breakStatement()
 
@@ -208,6 +210,16 @@ class Parser {
         }
 
         return modifiers
+
+    }
+
+    private safeConsumeSemicolon(){
+
+        if( this.previus()?.kind !== TKind.Semicolon ){
+
+            this.consume( TKind.Semicolon )   
+
+        }
 
     }
 
@@ -659,6 +671,88 @@ class Parser {
         return {
             kind: AstKind.NextStatement,
             span
+        }
+
+    }
+
+    private matchClauses(): MatchClause {
+
+        const expressions: Expr[] = []
+
+        do {
+
+            expressions.push( 
+                
+                this.expression()
+
+            )
+
+
+        } while( this.match( TKind.Comma ) && !this.isAtEnd() )
+
+        this.consume( TKind.Colon )
+
+        const body = this.statement()
+
+        return {
+            kind: AstKind.MatchClause, 
+            body,
+            expressions,
+            span: this.spanRange( expressions[0].span.start, this.getPreviousSpan().end )
+
+        }
+
+    } 
+
+    private matchStatement(): MatchStatement {
+
+        this.consume( TKind.Match )
+
+        const spanStart = this.getPreviousSpan()
+
+        this.consume( TKind.LeftParen )
+
+        const condition = this.expression()
+
+        this.consume( TKind.RightParen )
+        
+        this.consume( TKind.LeftBrace )
+        
+        const clauses: MatchClause[] = []
+
+        while( !this.check( TKind.RightBrace ) && !this.isAtEnd() ){
+
+            clauses.push(
+
+                this.matchClauses()
+
+            )
+
+            this.safeConsumeSemicolon()
+
+            if( this.check( TKind.Else ) ) break
+
+        }
+        
+        let _else: Statement | undefined = undefined
+
+        if( this.match( TKind.Else ) ){
+
+            _else = this.statement()
+
+        }
+
+        this.consume( TKind.Semicolon )
+
+        this.consume( TKind.RightBrace )
+
+
+        return {
+            kind: AstKind.MatchStatement,
+            clauses,
+            condition,
+            else: _else,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
         }
 
     }
