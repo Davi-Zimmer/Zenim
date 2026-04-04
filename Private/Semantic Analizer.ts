@@ -1,6 +1,6 @@
 import { addEmitHelpers, Modifier } from "typescript"
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, Statement, Identifier, Span, AstKind, LiteralValue, BinaryExpression, Unary, Modifiers, ModifierNames } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, Statement, Identifier, Span, AstKind, LiteralValue, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement } from "./Types/AST.js"
 
 type sla = { base: string | null, nullable: boolean, span: Span }
 
@@ -352,6 +352,20 @@ class SemanticAnalizer {
             kind: node.type
 
         })
+
+    }
+
+    private blockStatement( node: BlockStatement ){
+
+        this.scopeStack.push( ScopeKinds.Block )
+
+        for( const stmt of node.body ){
+
+            this.visit( stmt )
+
+        }
+
+        this.scopeStack.pop()
 
     }
 

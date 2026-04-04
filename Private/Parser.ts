@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, Identifier, Span, ModifierNames } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, Identifier, Span, ModifierNames, BlockStatement } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -98,6 +98,8 @@ class Parser {
     private statement(){
 
         if( this.isDeclaration() ) return this.declarations()
+
+        if( this.check( TKind.LeftBrace ) ) return this.blockStatement()
 
         return this.expressionStatement()
     }
@@ -329,12 +331,11 @@ class Parser {
 
             this.parseType()
 
-            if( this.check( TKind.Identifier ) ){
+            if( this.check( TKind.Identifier ) ) {
 
                 this.current = checkpoint
-
+                
                 return false
-
             }
 
             return true
@@ -343,7 +344,7 @@ class Parser {
 
             this.current = checkpoint
 
-            return false
+            return true
 
         }
 
@@ -352,6 +353,8 @@ class Parser {
     // ----------------------------------- _Declarations_ ----------------------------------- \\
     
     private isDeclaration(){
+
+        const a = !this.tryParseType()
 
         return this.check(
             TKind.Once,
@@ -364,7 +367,7 @@ class Parser {
             TKind.Dbl,
             TKind.Void,
             TKind.Null,
-        ) || this.check( TKind.NumberLiteral ) && this.checkFuturePeek( 1, TKind.DotDot ) || !this.tryParseType()
+        ) || this.check( TKind.NumberLiteral ) && this.checkFuturePeek( 1, TKind.DotDot ) || a
 
     }
 
@@ -420,6 +423,32 @@ class Parser {
             )
         } as VariableDeclaration
 
+
+    }
+
+    // ----------------------------------- _Statements_ ----------------------------------- \\
+
+    private blockStatement(){
+
+        let blockStartSpan = this.tokenToSpan( this.peek() )
+
+        this.consume( TKind.LeftBrace )
+
+        const statements: Statement[] = []
+
+        while( !this.match( TKind.RightBrace ) && !this.isAtEnd() ){
+            
+            statements.push(
+                this.statement()
+            )
+
+        }
+        
+        return {
+            kind: AstKind.BlockStatement,
+            body: statements,
+            span: this.spanRange( blockStartSpan.start, this.getPreviosSpan().end )
+        } as BlockStatement
 
     }
 
