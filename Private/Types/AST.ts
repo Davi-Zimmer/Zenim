@@ -2,12 +2,12 @@ import { TKind, Token } from "./Tokens"
 
 export enum AstKind {
     LiteralNumber     = "LiteralNumber",
-    LiteralString    = "LiteralString",
-    LiteralChar      = "LiteralChar",
-    LiteralBool      = "LiteralBool",
-    LiteralVoid      = "LiteralVoid",
-    LiteralNull      = "LiteralNull",
-    Identifier       = "Identitier",
+    LiteralString     = "LiteralString",
+    LiteralChar       = "LiteralChar",
+    LiteralBool       = "LiteralBool",
+    LiteralVoid       = "LiteralVoid",
+    LiteralNull       = "LiteralNull",
+    LiteralIdentifier = "LiteralIdentifier",
     // LiteralDouble    = "LiteralDouble",
     // LiteralFloat     = "LiteralFloat",
 
@@ -17,20 +17,19 @@ export enum AstKind {
     UnaryExpression     = "UnaryExpression",
     ExpressionStatement = "ExpressionStatement",
     BlockStatement      = "BlockStatement",
-
-    MemberAccess = "MemberAccess",
+    IfElseStatement     = "IfElseStatement",
+    MemberAccess        = "MemberAccess",
 
     VariableDeclaration = "VariableDeclaration",
 
 }
 
-// ----------------------------------- _Statement_ ----------------------------------- \\
-
-
 export interface Span {
     start: { line: number, column: number  }
     end  : { line: number, column: number  }
 }
+
+// ----------------------------------- _Statement_ ----------------------------------- \\
 
 export interface Statement {
     kind: AstKind
@@ -60,9 +59,18 @@ export interface BlockStatement extends Statement {
     span: Span
 }
 
-export type Statements = Expr | Statement | Program | Statement
+export interface IfElseStatement extends Statement {
+    kind       : AstKind.IfElseStatement
+    condition  : Expr
+    thenBranch : Statement
+    elseBranch : Statement | undefined
+    span       : Span
+}
+
+export type Statements = Expr | Statement | Program | Statement | IfElseStatement
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
+
 export interface LiteralNumber extends Expr {
     kind : AstKind.LiteralNumber
     value: number
@@ -103,6 +111,12 @@ export interface LiteralNull extends Expr {
 export interface LiteralVoid extends Expr {
     kind: AstKind.LiteralVoid
     value: void
+}
+
+export interface LiteralIdentifier extends Expr {
+    kind: AstKind.LiteralIdentifier
+    name: string,
+    span: Span
 }
 
 
@@ -148,7 +162,7 @@ export interface TypedBinding {
 
 export interface VariableDeclaration extends Statement {
     kind         : AstKind.VariableDeclaration 
-    identifier   : Identifier
+    identifier   : LiteralIdentifier
     type         : Type
     modifiers    : Modifiers[]
     initializer ?: Expr
@@ -164,11 +178,6 @@ export type Modifiers = {
     span: Span
 }
 
-export interface Identifier {
-    kind: AstKind.Identifier
-    name: string,
-    span: Span
-}
 
 
 

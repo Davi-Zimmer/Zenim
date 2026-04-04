@@ -1,8 +1,11 @@
 import { addEmitHelpers, Modifier } from "typescript"
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, Statement, Identifier, Span, AstKind, LiteralValue, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, Statement, LiteralIdentifier, Span, AstKind, LiteralValue, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid } from "./Types/AST.js"
 
-type sla = { base: string | null, nullable: boolean, span: Span }
+type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl'
+
+type sla = { base: baseType | null, nullable: boolean, span: Span }
+
 
 class SemanticAnalizer {
 
@@ -22,13 +25,13 @@ class SemanticAnalizer {
 
     private scopeStack = new ScopeStack()
 
-    private visit( ast: AST ){
+    private visit( ast: AST ) : null | sla {
 
         const func = this[ this.firstLower( ast.kind ) as keyof SemanticAnalizer ] as ( node: AST ) => void 
 
         if( !( func instanceof Function )) throw new Error(`"${ ast.kind }" Does't not exist in Semantic Analyzer `)
 
-        func.call( this, ast )
+        return func.call( this, ast ) ?? null
 
     }
 
@@ -78,7 +81,7 @@ class SemanticAnalizer {
         switch( node.kind ){
             
             case "Base": return { 
-                base: node.name,
+                base: node.name as baseType,
                 nullable: false,
                 span: node.span
             }
@@ -140,7 +143,7 @@ class SemanticAnalizer {
     private resolveComparison( left: sla, right: sla ): sla {
 
         const a =  {
-            base: "bool",
+            base: "bool" as baseType,
             nullable: false,
             span: this.spanRange( left.span, right.span )
         }
@@ -238,7 +241,7 @@ class SemanticAnalizer {
 
     }
 
-    private analyzeExpression( node: Expr | Identifier , scope: Scope ): sla {
+    private analyzeExpression( node: Expr | LiteralIdentifier , scope: Scope ): sla {
 
         switch( node.kind ) {
 
@@ -254,6 +257,12 @@ class SemanticAnalizer {
                 span: node.span
             }
 
+            case AstKind.LiteralBool: return {
+                base: 'bool',
+                nullable: false,
+                span: node.span
+            }
+           
             case AstKind.LiteralChar: return {
                 base: 'char',
                 nullable: false,
@@ -276,9 +285,9 @@ class SemanticAnalizer {
 
             case AstKind.UnaryExpression: return this.analyzeExpression( ( node as Unary ).right, scope )
 
-            case AstKind.Identifier: {
+            case AstKind.LiteralIdentifier: {
 
-                const n = ( node as Identifier ) 
+                const n = ( node as LiteralIdentifier ) 
 
                 const symbol = this.scopeStack.scope.resolve( n.name )
 
@@ -301,6 +310,20 @@ class SemanticAnalizer {
     private checkModifiers( modifiers: Modifiers[], scope: Scope ) {
 
         return this.isModifierAlloed( scope.kind, modifiers )
+
+    }
+
+    private baseIs( base: baseType | undefined | null, ...types: baseType[] ) {
+
+        if( !base ) return false
+
+        for( const t of types ) {
+
+            if( base === t ) return true
+
+        }
+
+        return false
 
     }
 
@@ -367,6 +390,67 @@ class SemanticAnalizer {
 
         this.scopeStack.pop()
 
+    }
+
+    private ifElseStatement( node: IfElseStatement ){
+
+        const type = this.visit( node.condition )
+
+        if( !this.baseIs( type?.base, 'bool' ) ){
+
+            throw new Error(`Condition must be boolean ${this.errorLocation( node.condition.span )}`)
+
+        }
+
+        this.visit( node.thenBranch )
+
+        if( node.elseBranch ) this.visit( node.elseBranch )
+
+
+    }
+
+    // ----------------------------------- Literals ----------------------------------- \\
+
+    private literalNumber( node: LiteralNumber ) {
+
+        return this.analyzeExpression( node, this.scopeStack.scope )
+    
+    }
+
+    private literalString( node: LiteralString ) {
+
+        return this.analyzeExpression( node, this.scopeStack.scope )
+    
+    }
+
+    private literalChar( node: LiteralChar ) {
+
+        return this.analyzeExpression( node, this.scopeStack.scope )
+    
+    }
+
+    private literalBool( node: LiteralBool ) {
+
+        return this.analyzeExpression( node, this.scopeStack.scope )
+    
+    }
+
+    private literalNull( node: LiteralNull ) {
+
+        return this.analyzeExpression( node, this.scopeStack.scope )
+    
+    }
+
+    private literalVoid( node: LiteralVoid ) {
+
+        return this.analyzeExpression( node, this.scopeStack.scope )
+    
+    }
+
+    private literalIdentifier( node: LiteralIdentifier ){
+        
+        return this.analyzeExpression( node, this.scopeStack.scope )
+        
     }
 
 }

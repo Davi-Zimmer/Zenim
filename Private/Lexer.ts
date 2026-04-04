@@ -28,6 +28,9 @@ export class Lexer {
         false : TKind.False,
         maybe : TKind.Maybe,
 
+        if    : TKind.If,
+        else  : TKind.Else,
+
     }
 
     constructor( src : string ){

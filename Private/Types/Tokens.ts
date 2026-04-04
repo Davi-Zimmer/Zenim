@@ -59,9 +59,11 @@ export enum TKind {
     LeftArrow     = "<-",
 
 
+    // Modifiers
     Mut = "Mut",
     Once = "Once",
     
+    // Types
     Int = "Int",
     Flt = "Flt",
     Str = "Str",
@@ -74,6 +76,10 @@ export enum TKind {
     True   = "True",
     False  = "False",
     Maybe  = "Maybe",
+
+    // Reserved words
+    If      = "If",
+    Else    = "Else",
 
         
 }
