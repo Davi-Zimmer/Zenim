@@ -32,12 +32,12 @@ function loadCode( fileName: string ){
 /// category
 /// list (int?)? x;
 
-// while( true ){}
+// 1..(bool?) list = [ true, null ];
 
 let code = `
-    do {
     
-    } while ( true );
+    3..bool b = [ true, false, maybe ];
+
 
 `
 
@@ -52,6 +52,6 @@ const tokens = Lexer.ScanTokens( code )
 
 const ast = Parser.Parse( tokens )
 
-console.log( JSON.stringify( ast, null, 3 ) )
+// console.log( JSON.stringify( ast, null, 3 ) )
 
 SemanticAnalizer.Analize( ast )
