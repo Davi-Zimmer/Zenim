@@ -32,6 +32,9 @@ export class Lexer {
         else  : TKind.Else,
         while : TKind.While,
         do    : TKind.Do,
+        for   : TKind.For,
+        in    : TKind.In,
+        of    : TKind.Of,
 
     }
 
@@ -228,7 +231,7 @@ export class Lexer {
         switch( c ){
 
             case '+' : this.addToken( TKind.Plus        ); break
-            case '-' : this.addToken( TKind.Minus       ); break
+            case '-' : this.ifChar  ( TKind.Greater, TKind.Minus, TKind.RightArrow ); break
             case '*' : this.ifChar  ( TKind.Star, TKind.Star, TKind.StarStar ); break
             case '/' : this.addToken( TKind.Slash       ); this.isLineComment(); break
             case '%' : this.addToken( TKind.Percent     ); break
@@ -242,7 +245,7 @@ export class Lexer {
             case ']' : this.addToken( TKind.RightBracket  ); break
             case '{' : this.addToken( TKind.LeftBrace     ); break
             case '}' : this.addToken( TKind.RightBrace    ); break
-            case "<" : this.ifChar  ( TKind.Minus, TKind.Minus, TKind.LeftArrow); break
+            case "<" : this.ifChar  ( TKind.Minus, TKind.Minus, TKind.LeftArrow ); break
             case ">" : this.addToken( TKind.Greater       ); break
             case ';' : this.addToken( TKind.Semicolon     ); break
             case ':' : this.addToken( TKind.Colon         ); break

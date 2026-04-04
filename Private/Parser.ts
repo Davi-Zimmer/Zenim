@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -100,6 +100,8 @@ class Parser {
         if( this.check( TKind.If ) ) return this.ifStatement()
 
         if( this.check( TKind.While ) ) return this.whileStatement()
+
+        if( this.check( TKind.For ) ) return this.forStatement()
 
         if( this.check( TKind.Do ) ) return this.doWhileStatement()
 
@@ -578,11 +580,81 @@ class Parser {
 
     }
 
+    private forStatement(): ForStatement {
+        
+        this.consume( TKind.For )
+
+        let spanStart = this.getPreviosSpan()
+
+        this.consume( TKind.LeftParen )
+
+        // declaration
+        const type = this.parseType()
+        const identifier = this.parseIdentifier()
+
+        // in / of
+        let forKind: 'in' | 'of'
+        
+        if( this.match( TKind.In, TKind.Of ) ) {
+
+            forKind = this.previus().kind === TKind.In ? 'in' : 'of'
+
+        } else {
+
+            throw new Error(`Expected 'in' or 'of' ${ this.errorLocation() }`)
+
+        }
+        
+        const iterable = this.expression()
+        
+        let step: Expr | undefined
+
+        if( this.match( TKind.Comma ) ) step = this.expression()
+
+        this.consume( TKind.RightParen )
+
+        const body = this.statement()
+
+        return {
+            kind: AstKind.ForStatement,
+            body,
+            type,
+            identifier,
+            step,
+            forKind,
+            iterable,
+            span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
+        }
+
+
+    }
+
     // ----------------------------------- _Expressions_ ----------------------------------- \\
 
     private expression(){
 
-        return this.assignment()
+        return this.range()
+
+    }
+
+    private range() {
+
+        let expr = this.assignment()
+
+        if( this.match( TKind.RightArrow ) ){
+
+            const right = this.assignment()
+
+            expr = {
+                kind: AstKind.RangeExpression,
+                start: expr,
+                end: right,
+                span: this.spanRange( expr.span.start, right.span.end )
+            } as RangeExpression
+
+        }
+
+        return expr
 
     }
 
