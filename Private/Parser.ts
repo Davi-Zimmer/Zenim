@@ -1,4 +1,4 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -99,6 +99,8 @@ class Parser {
 
         if( this.check( TKind.Break ) ) return this.breakStatement()
 
+        if( this.check( TKind.Next ) ) return this.nextStatement()
+
         if( this.check( TKind.If ) ) return this.ifStatement()
 
         if( this.check( TKind.While ) ) return this.whileStatement()
@@ -176,7 +178,7 @@ class Parser {
         } as Span
     }
 
-    private getPreviosSpan(){
+    private getPreviousSpan(){
 
         return  this.tokenToSpan( this.previus() )
 
@@ -398,7 +400,7 @@ class Parser {
     
                 const array: Expr[] = []
 
-                const spanStart = this.getPreviosSpan()
+                const spanStart = this.getPreviousSpan()
 
                 while( !this.check( TKind.RightBracket ) && ! this.isAtEnd() ){
 
@@ -420,7 +422,7 @@ class Parser {
                     kind: AstKind.LiteralList,
                     list: array,
                     size: array.length,
-                    span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
+                    span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
                 } as LiteralList
 
             } else {
@@ -497,7 +499,7 @@ class Parser {
         return {
             kind: AstKind.BlockStatement,
             body: statements,
-            span: this.spanRange( blockStartSpan.start, this.getPreviosSpan().end )
+            span: this.spanRange( blockStartSpan.start, this.getPreviousSpan().end )
         } as BlockStatement
 
     }
@@ -550,7 +552,7 @@ class Parser {
             kind: AstKind.WhileStatement,
             body: statement,
             condition: expr,
-            span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
         }
 
     }
@@ -577,7 +579,7 @@ class Parser {
             kind: AstKind.DoWhileStatement,
             body: statement,
             condition: expr,
-            span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
         }
 
     }
@@ -586,7 +588,7 @@ class Parser {
         
         this.consume( TKind.For )
 
-        let spanStart = this.getPreviosSpan()
+        let spanStart = this.getPreviousSpan()
 
         this.consume( TKind.LeftParen )
 
@@ -625,7 +627,7 @@ class Parser {
             step,
             forKind,
             iterable,
-            span: this.spanRange( spanStart.start, this.getPreviosSpan().end )
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
         }
 
 
@@ -635,11 +637,28 @@ class Parser {
 
         this.consume( TKind.Break )
         
+        const span = this.getPreviousSpan()
+
         this.consume( TKind.Semicolon )
 
         return {
             kind: AstKind.BreakStatement,
-            span: this.getPreviosSpan()
+            span
+        }
+
+    }
+
+    private nextStatement(): NextStatement {
+
+        this.consume( TKind.Next )
+        
+        const span = this.getPreviousSpan()
+
+        this.consume( TKind.Semicolon )
+
+        return {
+            kind: AstKind.NextStatement,
+            span
         }
 
     }
@@ -969,7 +988,7 @@ class Parser {
        return { 
             kind  : AstKind.LiteralNumber,
             value : Number( this.previus().literal ),
-            span  : this.getPreviosSpan()
+            span  : this.getPreviousSpan()
         } as LiteralNumber
 
     }
@@ -978,7 +997,7 @@ class Parser {
         return { 
             kind  : AstKind.LiteralString,
             value : this.previus().literal,
-            span  : this.getPreviosSpan()
+            span  : this.getPreviousSpan()
         } as LiteralString
     }
 
@@ -986,21 +1005,21 @@ class Parser {
         return { 
             kind  : AstKind.LiteralChar,
             value : this.previus().literal,
-            span  : this.getPreviosSpan()
+            span  : this.getPreviousSpan()
         } as LiteralChar
     }
 
     private primaryVoidLiteral(){
         return { 
             kind  : AstKind.LiteralVoid,
-            span  : this.getPreviosSpan()
+            span  : this.getPreviousSpan()
         } as LiteralVoid
     }
 
     private primaryNullLiteral(){
         return { 
             kind  : AstKind.LiteralNull,
-            span  : this.getPreviosSpan()
+            span  : this.getPreviousSpan()
         } as LiteralNull
     }
 
@@ -1008,7 +1027,7 @@ class Parser {
         return { 
             kind  : AstKind.LiteralBool,
             value :  this.previus().literal,
-            span  : this.getPreviosSpan()
+            span  : this.getPreviousSpan()
         } as LiteralBool
     }
 

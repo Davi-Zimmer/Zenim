@@ -86,7 +86,8 @@ export enum TKind {
     In      = "In",
     Of      = "Of",
     Break   = "Break",
-        
+    Next    = "Next",
+
 }
 
 
@@ -98,3 +99,9 @@ export interface Token {
     column      : number
     length      : number
 }
+
+/*
+
+
+
+*/

@@ -94,6 +94,9 @@ export class ScopeStack {
 
         this.current = new Scope( this.current, kind )
 
+        console.log( this.current.kind )
+
+
         return this.current
 
     }

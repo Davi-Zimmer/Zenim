@@ -27,6 +27,7 @@ export enum AstKind {
     DoWhileStatement    = "DoWhileStatement",
     ForStatement        = "ForStatement",
     BreakStatement      = "BreakStatement",
+    NextStatement       = "NextStatement",
 
     
     MemberAccess        = "MemberAccess",
@@ -105,6 +106,12 @@ export interface BreakStatement extends Statement {
     kind: AstKind.BreakStatement
     span: Span
 }
+
+export interface NextStatement extends Statement {
+    kind: AstKind.NextStatement
+    span: Span
+}
+
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
 
