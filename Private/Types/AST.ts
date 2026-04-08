@@ -14,6 +14,7 @@ export enum AstKind {
     // LiteralFloat     = "LiteralFloat",
 
     RangeExpression   = "RangeExpression",
+    MethodReturn      = "MethodReturn",
 
 
     Statement           = "Statement",
@@ -34,6 +35,8 @@ export enum AstKind {
     
     MemberAccess        = "MemberAccess",
     VariableDeclaration = "VariableDeclaration",
+    MethodDeclaration   = "MethodDeclaration",
+    MethodParams        = "MethodParams"
 
 }
 
@@ -220,6 +223,19 @@ export interface MemberAccess {
     span   : Span
 }
 
+export interface MethodReturn extends Expr {
+    kind: AstKind.MethodReturn
+    type: Type
+}
+
+export interface MethodParams extends Expr {
+    kind        : AstKind.MethodParams
+    type        : Type
+    modifiers   : Modifiers[]
+    initializer : Expr | undefined
+    identifier  : LiteralIdentifier
+}
+
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
 export type Type =
@@ -243,6 +259,26 @@ export interface VariableDeclaration extends Statement {
     modifiers    : Modifiers[]
     initializer ?: Expr
     span         : Span
+}
+
+export interface MethodParams extends Expr {
+    kind        : AstKind.MethodParams
+    identifier  : LiteralIdentifier
+    modifiers   : Modifiers[]
+    type        : Type
+    initializer : Expr | undefined
+}
+
+export interface MethodDeclaration extends Statement {
+    kind        : AstKind.MethodDeclaration
+    body        : BlockStatement
+    
+    returnType  : MethodReturn
+    identifier  : LiteralIdentifier
+    modifiers   : Modifiers[]
+    span        : Span
+    params      : MethodParams[]
+    metExplicit : boolean
 }
 
 // ----------------------------------- _XXX_ ----------------------------------- \\

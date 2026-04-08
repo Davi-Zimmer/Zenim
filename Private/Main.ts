@@ -35,19 +35,13 @@ function loadCode( fileName: string ){
 // 3..bool b = [ true, false, maybe ];
 // ..(..int) test = [ [] ]; // da erro ainda
 
+// ret a + b;
 let code = `
   
-    match( 1 ){
-
-        1: {};
-
-        2,3,4,5: {};
-
-        else {
-            
-        };
-
+    met int sum( int a, int b ){
+    
     }
+
 
 `
 
