@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue } from "./Types/AST.js"
+import { AST, Expr, Program, Type, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams } from "./Types/AST.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
 
@@ -760,6 +760,75 @@ class SemanticAnalizer {
             this.matchClause( clause )
 
         }
+
+        this.scopeStack.pop()
+
+    }
+
+    private methodParams( node: MethodParams ) {
+
+        if( this.scopeStack.scope.resolveLocal( node.identifier.name ) ){
+
+            throw new Error(`Identifier '${ node.identifier.name }' already exists in this scope ${this.errorLocation( node.identifier.span )}`)
+            
+        }
+
+        const type = this.resolveType( node.type )
+
+        if( !this.typeExist( type.base ) ) {
+            
+            throw new Error(`Type '${ type.base }' was never declared ${ this.errorLocation( node.span ) }`)
+
+        }
+
+        if( node.initializer ){
+
+            const initializer = this.analyzeExpression( node.initializer, this.scopeStack.scope )
+
+            if( initializer.base !== type.base ) throw new Error(`Type '${type.base}' is not compatible with '${initializer.base}' ${this.errorLocation( node.span )}`)
+
+            if( initializer.base === 'list' && type.base === 'list' ){
+
+                if( !this.isAssignable( type.inner, initializer.inner ) ) throw new Error(
+
+                    `Declared list type '${ type.inner.base }' is not compatible with list type '${ initializer.inner.base }' ${this.errorLocation( initializer.span )}`
+                
+                )
+
+                if( initializer.size > type.size ){
+
+                    throw new Error(`Too many itens in list, maximum is ${ type.size } but ${ initializer.size } was assigned ${ this.errorLocation( initializer.span ) }`)
+
+                }
+
+
+            } 
+
+        }
+
+        this.checkModifiers( node.modifiers, this.scopeStack.scope ) 
+
+        this.scopeStack.scope.declare({
+            identfier: node.identifier,
+            initialized: false,
+            kind: node.type
+
+        })
+
+    }
+
+    private methodDeclaration( node: MethodDeclaration ){
+
+        this.scopeStack.push( ScopeKinds.Function )
+
+        for( const param of node.params ){
+
+            this.methodParams( param )
+
+        }
+
+
+        this.blockStatement( node.body )
 
         this.scopeStack.pop()
 

@@ -128,7 +128,6 @@ export class ScopeStack {
         let scope: Scope | null = this.scope
 
         while( scope ){
-
             
             if( scope.isKind( ScopeKinds.Loop, ScopeKinds.Match ) ){
                 

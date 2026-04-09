@@ -1,4 +1,5 @@
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause } from "./Types/AST.js"
+import { textChangeRangeIsUnchanged } from "typescript"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -381,6 +382,41 @@ class Parser {
 
     }
 
+    private parseParameter(){
+
+        const params: MethodParams[] = []
+
+        while( !this.check( TKind.RightParen ) && !this.isAtEnd() ){
+
+            const spanStart = this.tokenToSpan( this.peek() )
+            
+            const modifiers = this.parseModifiers()
+
+            const type = this.parseType()
+
+            const identifier = this.parseIdentifier()
+
+            const initializer = this.parseInitializer()
+
+            params.push({
+                kind: AstKind.MethodParams,
+                initializer,
+                modifiers,
+                identifier,
+                type,
+                span: this.spanRange( spanStart.start, this.getPreviousSpan().end  )
+            })
+
+            if( this.check( TKind.RightParen ) ) break
+
+            this.consume( TKind.Comma )
+
+        }
+        
+        return params
+
+    }
+
     // ----------------------------------- _Declarations_ ----------------------------------- \\
     
     private isDeclaration(){
@@ -398,6 +434,7 @@ class Parser {
             TKind.Dbl,
             TKind.Void,
             TKind.Null,
+            TKind.Met
         ) || this.check( TKind.NumberLiteral ) && this.checkFuturePeek( 1, TKind.DotDot ) || a
 
     }
@@ -450,16 +487,6 @@ class Parser {
     }
 
     private declarations(){
-        
-        const a = this.variableDeclaration()
-
-        this.consume( TKind.Semicolon )
-
-        return a
-
-    }
-
-    private variableDeclaration(){
 
         let modifiers: Modifiers[] = []
 
@@ -469,9 +496,34 @@ class Parser {
 
         }
 
+        let isMethod = this.match( TKind.Met ) 
+
         const type = this.parseType()
 
+        if( isMethod ) {
+
+            return this.methodStatement( modifiers, type, true )
+
+        }
+
+
+        const a = this.variableDeclaration( modifiers, type )
+
+        this.consume( TKind.Semicolon )
+
+        return a
+
+    }
+
+    private variableDeclaration( modifiers: Modifiers[], type: Type ){
+
         const identifier = this.parseIdentifier()
+
+        if( this.check( TKind.LeftParen ) ){
+
+            return this.methodStatement( modifiers, type, false, identifier )
+
+        }
 
         let initializer = this.parseInitializer()
 
@@ -487,6 +539,37 @@ class Parser {
             )
         } as VariableDeclaration
 
+
+    }
+
+    private methodStatement( modifiers: Modifiers[], type: Type, metExplicit: boolean, identifier?: LiteralIdentifier ): MethodDeclaration {
+
+        if( !identifier ) identifier = this.parseIdentifier()
+        
+        this.consume( TKind.LeftParen )
+
+        const params = this.parseParameter()
+
+        this.consume( TKind.RightParen )
+
+        const body = this.blockStatement()
+
+        return {
+            kind: AstKind.MethodDeclaration,
+            body,
+            identifier,
+            modifiers,
+            params,
+            metExplicit,
+            returnType: {
+                kind: AstKind.MethodReturn,
+                type: type
+            } as MethodReturn,
+            span: this.spanRange( 
+                modifiers[0]?.span.start ?? type.span.start,
+                body?.span.end ?? body.span.end
+            )
+        } 
 
     }
 
@@ -756,6 +839,8 @@ class Parser {
         }
 
     }
+
+    
 
     // ----------------------------------- _Expressions_ ----------------------------------- \\
 
