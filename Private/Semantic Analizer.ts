@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement } from "./Types/AST.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement } from "./Types/AST.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
 
@@ -493,20 +493,6 @@ class SemanticAnalizer {
         return false
 
     }
-    /*
-    private convertDataToList( type: sla ){
-
-        if( type.base !== 'list') throw new Error(`TYPE IS NOT LIST`)
-
-        // const listSize = type.
-        
-        const nullable = type.nullable ? '?' : '' 
-
-
-        return `..${type.inner.base}${nullable}`
-
-    }
-    */
 
     private isInt( e: Expr ){
         return this.analyzeExpression( e, this.scopeStack.scope ).base === 'int'
@@ -515,100 +501,6 @@ class SemanticAnalizer {
     private isList( e: Expr ){
 
         return this.analyzeExpression( e, this.scopeStack.scope ).base === 'list'
-
-    }
-
-    private analyzeForIn( node: ForStatement, scope: Scope ){
-
-        const type = this.resolveType( node.type )
-
-        if( type.base !== 'int' ) {
-
-            throw new Error(`'For in' type must be int, but it came ${ type.base } ${ this.errorLocation( node.type.span ) } `)
-
-        }
-
-        if( type.nullable ) {
-
-            throw new Error(`'For in' type cannot be nullable ${ this.errorLocation( type.span ) }`)
-
-        }
-        
-        // adicionar restrição pra ponteiros tambem
-
-        if( node.iterable.kind === AstKind.RangeExpression ){
-
-            const range = node.iterable as RangeExpression
-
-            if( !this.isInt( range.start ) || !this.isInt( range.end ) ){
-
-                throw new Error(`Range expression must be 'int -> int' ${ this.errorLocation( node.iterable.span ) }`)
-
-            }
-
-        } else {
-
-            throw new Error(`'For in' iterable must be an range`)
-
-        }
-
-        if( node.step ){
-
-            if( !this.isInt( node.step ) ){
-
-                throw new Error(`Step must be int ${ this.errorLocation( node.step.span ) }`)
-
-            }
-
-        }
-
-    }
-
-    private analyzeForOf( node: ForStatement, scope: Scope ) {
-        
-        if( node.iterable.kind === AstKind.RangeExpression ) {
-
-            throw new Error(`In 'For of', range cannot be used ${ this.errorLocation( node.iterable.span ) }`)
-
-        }
-
-        const iterable = this.analyzeExpression( node.iterable , this.scopeStack.scope )
-
-        if( iterable.base !== 'list' ) {
-
-            throw new Error(`Iterable must be a list ${ this.errorLocation( node.iterable.span ) }`)
-
-        }
-
-        const type = this.resolveType( node.type )
-
-        if( iterable.inner.base !== type.base ){
-            
-            throw new Error(`The declared type in the loop is not the same as the type in the list ${ this.errorLocation( type.span ) }`)
-
-        }
-
-        if( type.nullable !== iterable.inner.nullable ){
-
-            if( type.nullable ){
-
-                throw new Error(`The iterable list is not nullable, but the variable is ${ this.errorLocation( type.span ) }`)
-            
-            }
-            
-            throw new Error(`The iterable list is nullable, but the variable isn't ${ this.errorLocation( type.span ) }`)
-
-        }
-
-        if( node.step ){
-
-            if( !this.isInt( node.step ) ){
-
-                throw new Error(`Step must be int ${ this.errorLocation( node.step.span ) }`)
-
-            }
-
-        }
 
     }
 
@@ -624,17 +516,7 @@ class SemanticAnalizer {
 
     }
 
-    // ------------------------------------------ Analisys ------------------------------------------ \\
-
-    private program( node: Program ){
-
-        node.body.forEach( n => this.visit( n ) )
-
-        console.log( 'No errors founded :)' )
-
-    }
-
-    private variableDeclaration( node: VariableDeclaration ){
+    private checkIdentifierExists( node: VariableDeclaration | MethodDeclaration | MethodParams ){
 
         if( this.scopeStack.scope.resolveLocal( node.identifier.name ) ){
 
@@ -642,7 +524,9 @@ class SemanticAnalizer {
             
         }
 
-        const type = this.resolveType( node.type )
+    }
+
+    private checkTypeExist( node: Statement, type: SemanticType ){
 
         if( !this.typeExist( type.base ) ) {
             
@@ -650,11 +534,9 @@ class SemanticAnalizer {
 
         }
 
-        if( !node.initializer && !type.nullable ){
-            
-            throw new Error(`It is not possible to declare variables without content unless they are nullable ${this.errorLocation( node.span )}`)
+    }
 
-        }
+    private checkInitializer( node: VariableDeclaration | MethodParams, type: SemanticType ){
 
         if( node.initializer ){
 
@@ -680,6 +562,33 @@ class SemanticAnalizer {
             } 
 
         }
+    }
+
+    // ------------------------------------------ Analisys ------------------------------------------ \\
+
+    private program( node: Program ){
+
+        node.body.forEach( n => this.visit( n ) )
+
+        console.log( 'No errors founded :)' )
+
+    }
+
+    private variableDeclaration( node: VariableDeclaration ){
+
+        this.checkIdentifierExists( node )
+
+        const type = this.resolveType( node.type )
+
+        this.checkTypeExist( node, type )
+
+        if( !node.initializer && !type.nullable ){
+            
+            throw new Error(`It is not possible to declare variables without content unless they are nullable ${this.errorLocation( node.span )}`)
+
+        }
+
+        this.checkInitializer( node, type )
 
         this.checkModifiers( node.modifiers, this.scopeStack.scope ) 
 
@@ -687,7 +596,6 @@ class SemanticAnalizer {
             identfier: node.identifier,
             initialized: false,
             kind: node.type
-
         })
 
     }
@@ -825,6 +733,100 @@ class SemanticAnalizer {
 
     }
 
+    private analyzeForIn( node: ForStatement, scope: Scope ){
+
+        const type = this.resolveType( node.type )
+
+        if( type.base !== 'int' ) {
+
+            throw new Error(`'For in' type must be int, but it came ${ type.base } ${ this.errorLocation( node.type.span ) } `)
+
+        }
+
+        if( type.nullable ) {
+
+            throw new Error(`'For in' type cannot be nullable ${ this.errorLocation( type.span ) }`)
+
+        }
+        
+        // adicionar restrição pra ponteiros tambem
+
+        if( node.iterable.kind === AstKind.RangeExpression ){
+
+            const range = node.iterable as RangeExpression
+
+            if( !this.isInt( range.start ) || !this.isInt( range.end ) ){
+
+                throw new Error(`Range expression must be 'int -> int' ${ this.errorLocation( node.iterable.span ) }`)
+
+            }
+
+        } else {
+
+            throw new Error(`'For in' iterable must be an range`)
+
+        }
+
+        if( node.step ){
+
+            if( !this.isInt( node.step ) ){
+
+                throw new Error(`Step must be int ${ this.errorLocation( node.step.span ) }`)
+
+            }
+
+        }
+
+    }
+
+    private analyzeForOf( node: ForStatement, scope: Scope ) {
+        
+        if( node.iterable.kind === AstKind.RangeExpression ) {
+
+            throw new Error(`In 'For of', range cannot be used ${ this.errorLocation( node.iterable.span ) }`)
+
+        }
+
+        const iterable = this.analyzeExpression( node.iterable , this.scopeStack.scope )
+
+        if( iterable.base !== 'list' ) {
+
+            throw new Error(`Iterable must be a list ${ this.errorLocation( node.iterable.span ) }`)
+
+        }
+
+        const type = this.resolveType( node.type )
+
+        if( iterable.inner.base !== type.base ){
+            
+            throw new Error(`The declared type in the loop is not the same as the type in the list ${ this.errorLocation( type.span ) }`)
+
+        }
+
+        if( type.nullable !== iterable.inner.nullable ){
+
+            if( type.nullable ){
+
+                throw new Error(`The iterable list is not nullable, but the variable is ${ this.errorLocation( type.span ) }`)
+            
+            }
+            
+            throw new Error(`The iterable list is nullable, but the variable isn't ${ this.errorLocation( type.span ) }`)
+
+        }
+
+        if( node.step ){
+
+            if( !this.isInt( node.step ) ){
+
+                throw new Error(`Step must be int ${ this.errorLocation( node.step.span ) }`)
+
+            }
+
+        }
+
+    }
+
     private forStatement( node: ForStatement ){
 
         const scope = this.scopeStack.scope
@@ -947,44 +949,13 @@ class SemanticAnalizer {
 
     private methodParams( node: MethodParams ) {
 
-        if( this.scopeStack.scope.resolveLocal( node.identifier.name ) ){
-
-            throw new Error(`Identifier '${ node.identifier.name }' already exists in this scope ${this.errorLocation( node.identifier.span )}`)
-            
-        }
+        this.checkIdentifierExists( node )
 
         const type = this.resolveType( node.type )
 
-        if( !this.typeExist( type.base ) ) {
-            
-            throw new Error(`Type '${ type.base }' was never declared ${ this.errorLocation( node.span ) }`)
+        this.checkTypeExist( node, type )
 
-        }
-
-        if( node.initializer ){
-
-            const initializer = this.analyzeExpression( node.initializer, this.scopeStack.scope )
-
-            if( initializer.base !== type.base ) throw new Error(`Type '${type.base}' is not compatible with '${initializer.base}' ${this.errorLocation( node.span )}`)
-
-            if( initializer.base === 'list' && type.base === 'list' ){
-
-                if( !this.isAssignable( type.inner, initializer.inner ) ) throw new Error(
-
-                    `Declared list type '${ type.inner.base }' is not compatible with list type '${ initializer.inner.base }' ${this.errorLocation( initializer.span )}`
-                
-                )
-
-                if( initializer.size > type.size ){
-
-                    throw new Error(`Too many itens in list, maximum is ${ type.size } but ${ initializer.size } was assigned ${ this.errorLocation( initializer.span ) }`)
-
-                }
-
-
-            } 
-
-        }
+        this.checkInitializer( node, type )
 
         this.checkModifiers( node.modifiers, this.scopeStack.scope ) 
 
@@ -992,12 +963,17 @@ class SemanticAnalizer {
             identfier: node.identifier,
             initialized: false,
             kind: node.type
-
         })
 
     }
 
     private methodDeclaration( node: MethodDeclaration ){
+
+        this.checkIdentifierExists( node )
+
+        const funcReturn = this.resolveType( node.returnType.type )
+
+        this.checkTypeExist( node, funcReturn )
 
         this.scopeStack.push( ScopeKinds.Function )
 
@@ -1007,10 +983,19 @@ class SemanticAnalizer {
 
         }
 
-        const funcReturn = this.resolveType( node.returnType.type )
 
         const flow = this.blockStatement( node.body )
-    
+
+        if( !flow.alwaysReturns ){
+
+            if( funcReturn.base !== 'void' ){
+
+                throw new Error(`The function return type is returning void ${ this.errorLocation( node.span ) }`)
+
+            }
+
+        }
+
         if( !( flow && flow.returnsType && this.isAssignable( funcReturn, flow.returnsType ) ) ){
 
             throw new Error(`The function type is not the same as function return type ${ this.errorLocation( funcReturn.span ) }`)
@@ -1018,7 +1003,12 @@ class SemanticAnalizer {
         }
 
         // registrar função
-        // checar se todos os caminhos retornar um tipo compativel com a função
+
+        this.scopeStack.scope.declare({
+            identfier: node.identifier,
+            initialized: true,
+            kind: node.returnType.type
+        })
 
         this.scopeStack.pop()
 
