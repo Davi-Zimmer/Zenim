@@ -1,5 +1,5 @@
-import { textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, Type, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn } from "./Types/AST.js"
+import { convertToObject, textChangeRangeIsUnchanged } from "typescript"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -100,6 +100,8 @@ class Parser {
 
         if( this.check( TKind.Match ) ) return this.matchStatement()
 
+        if( this.check( TKind.Ret ) ) return this.__returnStatement()
+
         if( this.check( TKind.Break ) ) return this.breakStatement()
 
         if( this.check( TKind.Next ) ) return this.nextStatement()
@@ -136,7 +138,7 @@ class Parser {
 
     // ----------------------------------- _Helpers_ ----------------------------------- \\
     
-    private errorLocation( astNode?: Statement | Expr | Type ){
+    private errorLocation( astNode?: Statement | Expr | TypeAST ){
 
         if( !astNode ) {
             
@@ -271,11 +273,11 @@ class Parser {
             kind: "Base",
             name: name?.lexeme,
             span: this.tokenToSpan( name! )
-        } as Type
+        } as TypeAST
 
     }
 
-    private parseArrayType(): Type {
+    private parseArrayType(): TypeAST {
 
         if( this.check( TKind.NumberLiteral ) || this.check( TKind.DotDot ) ){
 
@@ -297,7 +299,7 @@ class Parser {
                 inner,
                 size: listStart?.literal,
                 span: this.tokenToSpan( listStart )
-            } as Type
+            } as TypeAST
 
         }
 
@@ -305,7 +307,7 @@ class Parser {
 
     }
 
-    private parseType(): Type {
+    private parseType(): TypeAST {
         
         let type = this.parseArrayType()
 
@@ -515,7 +517,7 @@ class Parser {
 
     }
 
-    private variableDeclaration( modifiers: Modifiers[], type: Type ){
+    private variableDeclaration( modifiers: Modifiers[], type: TypeAST ){
 
         const identifier = this.parseIdentifier()
 
@@ -542,7 +544,7 @@ class Parser {
 
     }
 
-    private methodStatement( modifiers: Modifiers[], type: Type, metExplicit: boolean, identifier?: LiteralIdentifier ): MethodDeclaration {
+    private methodStatement( modifiers: Modifiers[], type: TypeAST, metExplicit: boolean, identifier?: LiteralIdentifier ): MethodDeclaration {
 
         if( !identifier ) identifier = this.parseIdentifier()
         
@@ -840,7 +842,23 @@ class Parser {
 
     }
 
-    
+    private __returnStatement(): ReturnStatement {
+
+        this.consume( TKind.Ret )
+
+        const spanStart = this.getPreviousSpan()
+
+        const expr = this.expression()
+
+        this.consume( TKind.Semicolon )
+
+        return {
+            kind: AstKind.__ReturnStatement,
+            expr,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+        }
+        
+    }
 
     // ----------------------------------- _Expressions_ ----------------------------------- \\
 

@@ -39,7 +39,15 @@ function loadCode( fileName: string ){
 let code = `
   
     met int sum( int a, int b ){
-    
+
+        if( true ){
+
+            ret 1;
+        } else {
+        
+            
+        }
+
     }
 
 

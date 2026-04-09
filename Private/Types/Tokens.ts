@@ -89,6 +89,7 @@ export enum TKind {
     Next    = "Next",
     Match   = "Match",
     Met     = "Met",
+    Ret     = "Ret",
 }
 
 
