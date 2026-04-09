@@ -31,12 +31,13 @@ export enum AstKind {
     NextStatement       = "NextStatement",
     MatchClause         = "MatchClause",
     MatchStatement      = "MatchStatement",
+    __ReturnStatement   = "__ReturnStatement",
 
     
     MemberAccess        = "MemberAccess",
     VariableDeclaration = "VariableDeclaration",
     MethodDeclaration   = "MethodDeclaration",
-    MethodParams        = "MethodParams"
+    MethodParams        = "MethodParams",
 
 }
 
@@ -100,7 +101,7 @@ export interface ForStatement extends Statement {
     kind       : AstKind.ForStatement
     forKind    : 'in' | 'of'
     identifier : LiteralIdentifier
-    type       : Type
+    type       : TypeAST
     
     iterable   : Expr
     step      ?: Expr
@@ -225,37 +226,42 @@ export interface MemberAccess {
 
 export interface MethodReturn extends Expr {
     kind: AstKind.MethodReturn
-    type: Type
+    type: TypeAST
 }
 
 export interface MethodParams extends Expr {
     kind        : AstKind.MethodParams
-    type        : Type
+    type        : TypeAST
     modifiers   : Modifiers[]
     initializer : Expr | undefined
     identifier  : LiteralIdentifier
 }
 
+export interface ReturnStatement extends Expr {
+    kind: AstKind.__ReturnStatement
+    expr: Expr
+}
+
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
-export type Type =
+export type TypeAST =
   | {span:Span, kind: "Base", name: string }
-  | {span:Span, kind: "Pointer", inner: Type }
-  | {span:Span, kind: "UniquePointer", inner: Type }
-  | {span:Span, kind: "Array", size: number, inner: Type }
-  | {span:Span, kind: "Nullable", inner: Type }
+  | {span:Span, kind: "Pointer", inner: TypeAST }
+  | {span:Span, kind: "UniquePointer", inner: TypeAST }
+  | {span:Span, kind: "Array", size: number, inner: TypeAST }
+  | {span:Span, kind: "Nullable", inner: TypeAST }
   
 
 export interface TypedBinding {
     identifier : string
-    type       : Type
+    type       : TypeAST
     modifiers ?: Modifiers[]
 }
 
 export interface VariableDeclaration extends Statement {
     kind         : AstKind.VariableDeclaration 
     identifier   : LiteralIdentifier
-    type         : Type
+    type         : TypeAST
     modifiers    : Modifiers[]
     initializer ?: Expr
     span         : Span
@@ -263,10 +269,10 @@ export interface VariableDeclaration extends Statement {
 
 export interface MethodParams extends Expr {
     kind        : AstKind.MethodParams
+    initializer : Expr | undefined
     identifier  : LiteralIdentifier
     modifiers   : Modifiers[]
-    type        : Type
-    initializer : Expr | undefined
+    type        : TypeAST
 }
 
 export interface MethodDeclaration extends Statement {
