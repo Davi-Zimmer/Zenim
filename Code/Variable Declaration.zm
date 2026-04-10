@@ -94,3 +94,19 @@ met int sum( int a, int b ){
     ret 0;
 
 }
+
+
+model Point2D {
+    int x,
+    int y
+};
+
+
+model Point3D : Point2D {
+    int z
+};
+
+
+model Test {
+    Point2D p
+};

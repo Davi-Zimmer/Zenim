@@ -1,4 +1,4 @@
-import { MethodSymbol, ModelSymbol, SymbolInfo } from "./Types/Semantic.js"
+import { AliasSymbol, MethodSymbol, ModelSymbol, SymbolInfo } from "./Types/Semantic.js"
 import { HasModifier } from "./Utils/HasModifier.js"
 import { Modifiers } from "./Types/AST.js"
 import { TKind } from "./Types/Tokens.js"
@@ -18,6 +18,7 @@ export class Scope {
     private variables = new Map< string, SymbolInfo >()
     private models    = new Map< string, ModelSymbol >()
     private methods   = new Map< string, MethodSymbol >()
+    private alias     = new Map< string, AliasSymbol >()
 
     public parent : Scope | null = null
     public kind   : ScopeKinds
@@ -54,6 +55,28 @@ export class Scope {
 
     }
 
+    public declareAlias( symbol: AliasSymbol ){
+
+        if( this.alias.has( symbol.identifier.name ) ) throw new Error(`Symbol '${ symbol.identifier.name }' already declared in this scope`)
+
+        this.alias.set( symbol.identifier.name, symbol )
+
+    }
+
+
+    public resolveAll( identifier: string ){
+
+        return (
+
+            this.resolveModel  ( identifier ) ||
+            this.resolveMethod ( identifier ) ||
+            this.resolveVar    ( identifier ) ||
+            this.resolveAlias  ( identifier )
+
+        )
+
+    }
+
     public resolveVar( identifier: string ){
 
         let scope: Scope | null = this
@@ -69,18 +92,6 @@ export class Scope {
         }
 
         return null
-
-    }
-
-    public resolveAll( identifier: string ){
-
-        return (
-
-            this.resolveModel  ( identifier ) ||
-            this.resolveMethod ( identifier ) ||
-            this.resolveVar    ( identifier )
-
-        )
 
     }
 
@@ -120,6 +131,24 @@ export class Scope {
 
     }
 
+    public resolveAlias( identifier: string ){
+    
+        let scope: Scope | null = this
+
+        while( scope ){
+
+            const found = scope.alias.get( identifier )
+
+            if( found ) return found
+
+            scope = scope.parent
+
+        }
+
+        return null
+
+    }
+
     public resolveLocalVar( identifier: string ){
         
         return this.variables.get( identifier ) ?? null
@@ -135,6 +164,12 @@ export class Scope {
     public resolveLocalMethod( identifier: string ){
         
         return this.methods.get( identifier ) ?? null
+
+    }
+
+    public resolveLocalAlias( identifier: string ){
+        
+        return this.alias.get( identifier ) ?? null
 
     }
 

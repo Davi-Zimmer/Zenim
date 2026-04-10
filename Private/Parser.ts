@@ -1,5 +1,5 @@
 import { convertToObject, textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -438,6 +438,7 @@ class Parser {
             TKind.Null,
             TKind.Met,
             TKind.Model,
+            TKind.Alias,
         ) || this.check( TKind.NumberLiteral ) && this.checkFuturePeek( 1, TKind.DotDot ) || a
 
     }
@@ -492,6 +493,8 @@ class Parser {
     private declarations(){
 
         if( this.check( TKind.Model ) ) return this.modelStatement()
+
+        if( this.check( TKind.Alias ) ) return this.aliasStatement()
 
         let modifiers: Modifiers[] = []
 
@@ -916,7 +919,7 @@ class Parser {
 
             )
 
-            if( this.check(TKind.RightBrace ) ) break
+            if( this.check( TKind.RightBrace ) ) break
 
             if( this.check( TKind.Comma ) ) this.consume( TKind.Comma )
 
@@ -931,6 +934,79 @@ class Parser {
             field,
             identifier,
             composition,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+        }
+
+    }
+
+    private parseAliasItem(): AliasItem {
+
+        const spanStart = this.tokenToSpan( this.peek() )
+
+        const identifier = this.parseIdentifier()
+        
+        this.consume( TKind.Colon )
+
+        const type = this.parseType()
+
+        return {
+            kind: AstKind.AliasItem,
+            type,
+            identifier,
+            modifiers: [],
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+
+        }
+
+    }
+
+    private aliasStatement(): AliasStatement | AliasItem {
+
+        this.consume( TKind.Alias )
+
+        const spanStart = this.getPreviousSpan()
+
+        const items: AliasItem[] = []
+        
+        if( this.match( TKind.LeftParen ) ){
+            
+            while( !this.check( TKind.RightParen ) && !this.isAtEnd() ){
+
+                items.push(
+
+                    this.parseAliasItem()
+
+                )
+
+                if( this.check( TKind.RightParen ) ) break
+
+                if( this.check( TKind.Comma ) ) this.consume( TKind.Comma )
+
+            }
+
+            this.consume( TKind.RightParen )
+
+            this.consume( TKind.Semicolon )
+
+            return {
+                kind: AstKind.AliasStatement,
+                items,
+                span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+            }
+
+        }
+
+        items.push(
+
+            this.parseAliasItem()
+
+        )
+
+        this.consume( TKind.Semicolon )
+
+        return {
+            kind: AstKind.AliasStatement,
+            items,
             span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
         }
 
