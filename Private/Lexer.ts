@@ -40,6 +40,7 @@ export class Lexer {
         match : TKind.Match,
         met   : TKind.Met,
         ret   : TKind.Ret,
+        model : TKind.Model,
 
     }
 

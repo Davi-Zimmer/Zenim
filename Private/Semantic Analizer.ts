@@ -1,26 +1,8 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement } from "./Types/AST.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration } from "./Types/AST.js"
+import { FieldInfo, Flow, SemanticType, ModelSymbol } from "./Types/Semantic.js"
 
-type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any'
-
-type SemanticType =
-    | { base: 'str'  | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'bool' | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'char' | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'void' | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'null' | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'int'  | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'dbl'  | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'flt'  | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'any'  | null, nullable: boolean, span: Span, type: 'data' }
-    | { base: 'list' | null, nullable: boolean, span: Span, inner: SemanticType, size: number, type: 'data' }
-
-
-type Flow = {
-    type: 'flow'
-    returnsType: SemanticType | null
-    alwaysReturns: boolean
-}
+type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model'
 
 
 
@@ -96,7 +78,8 @@ class SemanticAnalizer {
     // ------------------------------------------ Helpers ------------------------------------------ \\
 
     private modifiersAllowedIn: Record< string, Set< string > > = {
-        Global: new Set([ 'Mut', 'Once' ]),
+        Global : new Set([ 'Mut', 'Once' ]),
+        Model  : new Set([ 'Mut', 'Once' ])
     }
 
     private isModifierAlloed( scopeKind: ScopeKinds, modifier: Modifiers[] ){
@@ -119,7 +102,7 @@ class SemanticAnalizer {
 
     }
 
-    private resolveType( node: TypeAST ): SemanticType {
+    private resolveType( node: TypeAST ): SemanticType { /////////////////// coisar o model aq
     
         switch( node.kind ){
             
@@ -168,16 +151,17 @@ class SemanticAnalizer {
     private typeExist( type: string | null ){
 
         return (
-            type !== null   &&
-            type === 'int'  ||
-            type === 'flt'  ||
-            type === 'str'  ||
-            type === 'dbl'  ||
-            type === 'char' ||
-            type === 'bool' ||
-            type === 'void' ||
-            type === 'null' ||
-            type === 'list'
+            type !== null    &&
+            type === 'int'   ||
+            type === 'flt'   ||
+            type === 'str'   ||
+            type === 'dbl'   ||
+            type === 'char'  ||
+            type === 'bool'  ||
+            type === 'void'  ||
+            type === 'null'  ||
+            type === 'list'  ||
+            !(!this.scopeStack.scope.resolveModel( type! ))
         )
 
     }
@@ -362,12 +346,26 @@ class SemanticAnalizer {
 
                 const n = ( node as LiteralIdentifier ) 
 
-                const symbol = this.scopeStack.scope.resolve( n.name )
-
-                if( !symbol ) throw new Error(`Variable '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
+                const symbolVar = this.scopeStack.scope.resolveVar( n.name )
+                if( symbolVar ) return this.resolveType( symbolVar.kind )
                 
-                return this.resolveType( symbol.kind )
 
+                const symbolMethod = this.scopeStack.scope.resolveMethod( n.name )
+                if( symbolMethod ) return this.resolveType( symbolMethod.returns )
+
+
+                const symbolModel = this.scopeStack.scope.resolveModel( n.name )
+                if( symbolModel ) return {
+                    base: 'model',
+                    model: symbolModel,
+                    nullable: false,
+                    span: node.span,
+                    type: 'data'
+
+                }
+
+                throw new Error(`Identifier '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
+    
             }
 
             default: return {
@@ -391,6 +389,8 @@ class SemanticAnalizer {
 
         if( a.base === 'list' && b.base === 'list' ) return this.isAssignable( a.inner, b.inner )
         
+        if( a.base === 'model' && b.base === 'model' ) return a.model === b.model
+
         return true
 
     }
@@ -516,9 +516,13 @@ class SemanticAnalizer {
 
     }
 
-    private checkIdentifierExists( node: VariableDeclaration | MethodDeclaration | MethodParams ){
+    private checkIdentifierExists( node: VariableDeclaration | MethodDeclaration | MethodParams | ModelDeclaration | ModelFieldDeclaration ){
 
-        if( this.scopeStack.scope.resolveLocal( node.identifier.name ) ){
+        if( 
+            this.scopeStack.scope.resolveLocalVar  ( node.identifier.name ) ||
+            this.scopeStack.scope.resolveLocalModel( node.identifier.name ) ||
+            this.scopeStack.scope.resolveLocalMethod ( node.identifier.name )
+        ){
 
             throw new Error(`Identifier '${ node.identifier.name }' already exists in this scope ${this.errorLocation( node.identifier.span )}`)
             
@@ -536,7 +540,7 @@ class SemanticAnalizer {
 
     }
 
-    private checkInitializer( node: VariableDeclaration | MethodParams, type: SemanticType ){
+    private checkInitializer( node: VariableDeclaration | MethodParams | ModelFieldDeclaration, type: SemanticType ){
 
         if( node.initializer ){
 
@@ -563,6 +567,26 @@ class SemanticAnalizer {
 
         }
     }
+
+    /*
+        private chechCycle( model: ModelSymbol, visited = new Set< ModelSymbol >() ){
+
+            if( visited.has( model ) ){
+
+                throw new Error(`Circular dependency of the model ${ this.errorLocation( model.identifier.span ) }`)
+
+            }
+
+            visited.add( model )
+
+            if( model.composition ){
+
+                this.chechCycle( model.composition, visited )
+
+            }
+
+        }
+    */
 
     // ------------------------------------------ Analisys ------------------------------------------ \\
 
@@ -592,8 +616,8 @@ class SemanticAnalizer {
 
         this.checkModifiers( node.modifiers, this.scopeStack.scope ) 
 
-        this.scopeStack.scope.declare({
-            identfier: node.identifier,
+        this.scopeStack.scope.declareVar({
+            identifier: node.identifier,
             initialized: false,
             kind: node.type
         })
@@ -959,8 +983,8 @@ class SemanticAnalizer {
 
         this.checkModifiers( node.modifiers, this.scopeStack.scope ) 
 
-        this.scopeStack.scope.declare({
-            identfier: node.identifier,
+        this.scopeStack.scope.declareVar({
+            identifier: node.identifier,
             initialized: false,
             kind: node.type
         })
@@ -977,12 +1001,15 @@ class SemanticAnalizer {
 
         this.scopeStack.push( ScopeKinds.Function )
 
+        const params: TypeAST[] = []
+
         for( const param of node.params ){
 
             this.methodParams( param )
 
-        }
+            params.push( param.type )
 
+        }
 
         const flow = this.blockStatement( node.body )
 
@@ -1002,15 +1029,13 @@ class SemanticAnalizer {
 
         }
 
-        // registrar função
-
-        this.scopeStack.scope.declare({
-            identfier: node.identifier,
-            initialized: true,
-            kind: node.returnType.type
-        })
-
         this.scopeStack.pop()
+
+        this.scopeStack.scope.declareMethod({
+            identifier : node.identifier,
+            returns    : node.returnType.type,
+            params
+        })
 
     }
 
@@ -1025,6 +1050,74 @@ class SemanticAnalizer {
 
         } as Flow
 
+    }
+
+    private modelField( node: ModelFieldDeclaration ) {
+
+        this.checkModifiers( node.modifiers, this.scopeStack.scope  )
+
+        this.checkIdentifierExists( node )
+
+        const type = this.resolveType( node.type )
+
+        this.checkTypeExist( node, type )
+
+        this.checkInitializer( node, type )
+
+        return {
+            type: node.type,
+            defaultValue: type,
+            identifier: node.identifier
+        }
+
+    }
+
+    private modelDeclaration( node: ModelDeclaration ){
+
+        this.checkIdentifierExists( node )
+
+        this.scopeStack.push( ScopeKinds.Model )
+
+        let composition
+
+        if( node.composition ){
+
+            composition = this.scopeStack.scope.resolveModel( node.composition.name )
+
+            if( !composition ){
+
+                throw new Error(`Model '${ node.composition.name }' Does't not exist in this scope ${ this.errorLocation( node.composition.span ) }`)
+
+            }
+
+        }
+
+        const model: ModelSymbol = {
+            fields: new Map(),
+            identifier: node.identifier,
+            composition
+        }
+
+        for( const field of node.field ){
+            
+            const name = field.identifier.name
+
+            const fieldModel = this.modelField( field )
+
+            if( model.fields.has( name ) ){
+
+                throw new Error(`Identifier '${ name }' has already been declared ${ this.errorLocation( field.identifier.span ) }`)
+
+            }
+
+            model.fields.set( name, fieldModel ) 
+
+        }
+
+        this.scopeStack.pop()
+
+        this.scopeStack.scope.declareModel( model )
+        
     }
 
     // ----------------------------------- Literals ----------------------------------- \\

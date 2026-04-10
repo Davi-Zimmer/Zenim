@@ -1,5 +1,5 @@
 import { convertToObject, textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -436,7 +436,8 @@ class Parser {
             TKind.Dbl,
             TKind.Void,
             TKind.Null,
-            TKind.Met
+            TKind.Met,
+            TKind.Model,
         ) || this.check( TKind.NumberLiteral ) && this.checkFuturePeek( 1, TKind.DotDot ) || a
 
     }
@@ -490,6 +491,8 @@ class Parser {
 
     private declarations(){
 
+        if( this.check( TKind.Model ) ) return this.modelStatement()
+
         let modifiers: Modifiers[] = []
 
         if( this.isModifier() ){
@@ -507,7 +510,6 @@ class Parser {
             return this.methodStatement( modifiers, type, true )
 
         }
-
 
         const a = this.variableDeclaration( modifiers, type )
 
@@ -858,6 +860,80 @@ class Parser {
             span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
         }
         
+    }
+
+    private parseModelFieldDeclaration(): ModelFieldDeclaration {
+
+        const aSpanStart = this.tokenToSpan( this.peek() )
+
+        const modifiers = this.parseModifiers()
+
+        const type = this.parseType()
+
+        const identifier = this.parseIdentifier()
+
+        let initializer = this.parseInitializer()
+
+        return {
+            kind: AstKind.ModelFieldDeclaration,
+            initializer,
+            identifier,
+            type,
+            modifiers,
+            span: this.spanRange( aSpanStart.start, this.getPreviousSpan().end )
+
+        }
+
+    }
+
+    private modelStatement(): ModelDeclaration {
+
+        this.consume( TKind.Model )
+
+        const spanStart = this.getPreviousSpan()
+
+        const identifier = this.parseIdentifier()
+
+        let composition: LiteralIdentifier | undefined = undefined
+
+        if( this.check( TKind.Colon ) ) {
+
+            this.consume( TKind.Colon )
+
+            composition = this.parseIdentifier()
+
+        }
+
+        this.consume( TKind.LeftBrace )
+
+        const field: ModelFieldDeclaration[] = []
+
+        while( !this.check( TKind.RightBrace ) && !this.isAtEnd() ){
+
+            field.push(
+
+                this.parseModelFieldDeclaration()
+
+            )
+
+            if( this.check(TKind.RightBrace ) ) break
+
+            if( this.check( TKind.Comma ) ) this.consume( TKind.Comma )
+
+        }
+
+        this.consume( TKind.RightBrace )
+
+        this.consume( TKind.Semicolon )
+
+        return {
+            kind: AstKind.ModelDeclaration,
+            field,
+            identifier,
+            composition,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+        }
+
     }
 
     // ----------------------------------- _Expressions_ ----------------------------------- \\

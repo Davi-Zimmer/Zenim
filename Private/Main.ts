@@ -37,20 +37,21 @@ function loadCode( fileName: string ){
 
 // ret a + b;
 let code = `
+
+    model Point2D {
+        int x,
+        int y
+    };
+
   
-    met int sum( int a, int b ){
+    model Point3D : Point2D {
+        int z
+    };
 
-        match( 1 ){
-
-            1: ret 1;
-            2: {};
-
-        }
-
-        ret 0;
-
-    }
-
+   
+    model Test {
+        Point2D p
+    };
 
 `
 

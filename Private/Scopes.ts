@@ -1,4 +1,4 @@
-import { SymbolInfo } from "./Types/Semantic.js"
+import { MethodSymbol, ModelSymbol, SymbolInfo } from "./Types/Semantic.js"
 import { HasModifier } from "./Utils/HasModifier.js"
 import { Modifiers } from "./Types/AST.js"
 import { TKind } from "./Types/Tokens.js"
@@ -15,7 +15,9 @@ export enum ScopeKinds {
 
 export class Scope {
 
-    private symbols = new Map< string, SymbolInfo >
+    private variables = new Map< string, SymbolInfo >()
+    private models    = new Map< string, ModelSymbol >()
+    private methods   = new Map< string, MethodSymbol >()
 
     public parent : Scope | null = null
     public kind   : ScopeKinds
@@ -28,21 +30,37 @@ export class Scope {
 
     }
 
-    public declare( symbol: SymbolInfo ){
+    public declareVar( symbol: SymbolInfo ){
 
-        if( this.symbols.has( symbol.identfier.name ) ) throw new Error(`Symbol '${symbol.identfier.name}' already declared in this scope`)
+        if( this.variables.has( symbol.identifier.name ) ) throw new Error(`Symbol '${ symbol.identifier.name }' already declared in this scope`)
 
-        this.symbols.set( symbol.identfier.name, symbol )
+        this.variables.set( symbol.identifier.name, symbol )
 
     }
 
-    public resolve( identifier: string ){
+    public declareModel( symbol: ModelSymbol ){
+
+        if( this.models.has( symbol.identifier.name ) ) throw new Error(`Symbol '${ symbol.identifier.name }' already declared in this scope`)
+
+        this.models.set( symbol.identifier.name, symbol )
+
+    }
+
+    public declareMethod( symbol: MethodSymbol ){
+
+        if( this.methods.has( symbol.identifier.name ) ) throw new Error(`Symbol '${ symbol.identifier.name }' already declared in this scope`)
+
+        this.methods.set( symbol.identifier.name, symbol )
+
+    }
+
+    public resolveVar( identifier: string ){
 
         let scope: Scope | null = this
 
         while( scope ){
 
-            const found = scope.symbols.get( identifier )
+            const found = scope.variables.get( identifier )
 
             if( found ) return found
 
@@ -54,15 +72,75 @@ export class Scope {
 
     }
 
-    public resolveLocal( identifier: string ){
-        
-        return this.symbols.get( identifier ) ?? null
+    public resolveAll( identifier: string ){
+
+        return (
+
+            this.resolveModel  ( identifier ) ||
+            this.resolveMethod ( identifier ) ||
+            this.resolveVar    ( identifier )
+
+        )
 
     }
 
-    public assign( identifier: string ){
+    public resolveModel( identifier: string ){
 
-        const symbol = this.resolve( identifier )
+        let scope: Scope | null = this
+
+        while( scope ){
+
+            const found = scope.models.get( identifier )
+
+            if( found ) return found
+
+            scope = scope.parent
+
+        }
+
+        return null
+
+    }
+
+    public resolveMethod( identifier: string ){
+
+        let scope: Scope | null = this
+
+        while( scope ){
+
+            const found = scope.methods.get( identifier )
+
+            if( found ) return found
+
+            scope = scope.parent
+
+        }
+
+        return null
+
+    }
+
+    public resolveLocalVar( identifier: string ){
+        
+        return this.variables.get( identifier ) ?? null
+
+    }
+
+    public resolveLocalModel( identifier: string ){
+        
+        return this.models.get( identifier ) ?? null
+
+    }
+
+    public resolveLocalMethod( identifier: string ){
+        
+        return this.methods.get( identifier ) ?? null
+
+    }
+
+    public assignVar( identifier: string ){
+
+        const symbol = this.resolveVar( identifier )
 
         if( !symbol ) throw new Error(`Cannot assign to undeclared variable '${identifier}'`)
         
@@ -87,7 +165,6 @@ export class Scope {
         return false
 
     }
-
 
 }
 

@@ -1,4 +1,5 @@
-import { TKind, Token } from "./Tokens"
+import { ModelSymbol } from "./Semantic.js"
+import { TKind, Token } from "./Tokens.js"
 
 export enum AstKind {
     LiteralNumber     = "LiteralNumber",
@@ -32,6 +33,8 @@ export enum AstKind {
     MatchClause         = "MatchClause",
     MatchStatement      = "MatchStatement",
     __ReturnStatement   = "__ReturnStatement",
+    ModelDeclaration    = "ModelDeclaration",
+    ModelFieldDeclaration = "ModelFieldDeclaration",
 
     
     MemberAccess        = "MemberAccess",
@@ -245,11 +248,12 @@ export interface ReturnStatement extends Expr {
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
 export type TypeAST =
-  | {span:Span, kind: "Base", name: string }
-  | {span:Span, kind: "Pointer", inner: TypeAST }
-  | {span:Span, kind: "UniquePointer", inner: TypeAST }
-  | {span:Span, kind: "Array", size: number, inner: TypeAST }
-  | {span:Span, kind: "Nullable", inner: TypeAST }
+  | { span: Span, kind: "Base", name: string }
+  | { span: Span, kind: "Pointer", inner: TypeAST }
+  | { span: Span, kind: "UniquePointer", inner: TypeAST }
+  | { span: Span, kind: "Array", size: number, inner: TypeAST }
+  | { span: Span, kind: "Nullable", inner: TypeAST }
+  | { span: Span, kind: "Model", model: ModelSymbol }
   
 
 export interface TypedBinding {
@@ -285,6 +289,22 @@ export interface MethodDeclaration extends Statement {
     span        : Span
     params      : MethodParams[]
     metExplicit : boolean
+}
+
+export interface ModelFieldDeclaration extends Statement {
+    kind        : AstKind.ModelFieldDeclaration
+    initializer : Expr | undefined
+    identifier  : LiteralIdentifier
+    modifiers   : Modifiers[]
+    type        : TypeAST
+}
+
+export interface ModelDeclaration extends Statement {
+    composition : LiteralIdentifier | undefined
+    kind        : AstKind.ModelDeclaration
+    identifier  : LiteralIdentifier
+    span        : Span
+    field       : ModelFieldDeclaration[]
 }
 
 // ----------------------------------- _XXX_ ----------------------------------- \\
