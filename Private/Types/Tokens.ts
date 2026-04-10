@@ -90,6 +90,7 @@ export enum TKind {
     Match   = "Match",
     Met     = "Met",
     Ret     = "Ret",
+    Model   = "Model",
 }
 
 
