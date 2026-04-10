@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration } from "./Types/AST.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement } from "./Types/AST.js"
 import { FieldInfo, Flow, SemanticType, ModelSymbol } from "./Types/Semantic.js"
 
 type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model'
@@ -161,7 +161,8 @@ class SemanticAnalizer {
             type === 'void'  ||
             type === 'null'  ||
             type === 'list'  ||
-            !(!this.scopeStack.scope.resolveModel( type! ))
+            !( !this.scopeStack.scope.resolveModel( type! ) ) ||
+            !( !this.scopeStack.scope.resolveAlias( type! ) )
         )
 
     }
@@ -516,7 +517,7 @@ class SemanticAnalizer {
 
     }
 
-    private checkIdentifierExists( node: VariableDeclaration | MethodDeclaration | MethodParams | ModelDeclaration | ModelFieldDeclaration ){
+    private checkIdentifierExists( node: VariableDeclaration | MethodDeclaration | MethodParams | ModelDeclaration | ModelFieldDeclaration | AliasItem ){
 
         if( 
             this.scopeStack.scope.resolveLocalVar  ( node.identifier.name ) ||
@@ -620,6 +621,7 @@ class SemanticAnalizer {
             identifier: node.identifier,
             initialized: false,
             kind: node.type
+
         })
 
     }
@@ -1118,6 +1120,26 @@ class SemanticAnalizer {
 
         this.scopeStack.scope.declareModel( model )
         
+    }
+
+    private aliasStatement( node: AliasStatement ) {
+
+        for( const item of node.items ){
+
+            this.checkIdentifierExists( item )
+
+            const type = this.resolveType( item.type )
+
+            this.checkTypeExist( node, type )
+
+            this.scopeStack.scope.declareAlias({
+                identifier: item.identifier,
+                type: item.type
+
+            })
+            
+        }
+
     }
 
     // ----------------------------------- Literals ----------------------------------- \\

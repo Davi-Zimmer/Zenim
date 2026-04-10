@@ -38,20 +38,19 @@ function loadCode( fileName: string ){
 // ret a + b;
 let code = `
 
-    model Point2D {
-        int x,
-        int y
-    };
+    alias(
+        a: int,
+        b: int,
+        c: int
+    );
 
-  
-    model Point3D : Point2D {
-        int z
-    };
 
+   alias X: int;
+
+   X? test;
    
-    model Test {
-        Point2D p
-    };
+   X test; // nullable error
+
 
 `
 

@@ -34,13 +34,17 @@ export type ModelSymbol = {
     composition : ModelSymbol | undefined
 }
 
-
 export type MethodSymbol = {
     identifier : LiteralIdentifier
     returns    : TypeAST
     params     : TypeAST[]
 }
 
+export type AliasSymbol = {
+    identifier : LiteralIdentifier
+    type       : TypeAST
+
+}
 
 
 export type Flow = {

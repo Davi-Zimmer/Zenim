@@ -35,6 +35,8 @@ export enum AstKind {
     __ReturnStatement   = "__ReturnStatement",
     ModelDeclaration    = "ModelDeclaration",
     ModelFieldDeclaration = "ModelFieldDeclaration",
+    AliasStatement        = "AliasStatement",
+    AliasItem             = "AliasItem",
 
     
     MemberAccess        = "MemberAccess",
@@ -137,6 +139,19 @@ export interface MatchStatement extends Statement {
     else      : Statement | undefined
 
 }
+
+export interface AliasItem extends Statement {
+    kind       : AstKind.AliasItem
+    type       : TypeAST
+    modifiers  : Modifiers[]
+    identifier : LiteralIdentifier
+}
+
+export interface AliasStatement extends Statement {
+    kind       : AstKind.AliasStatement
+    items      : AliasItem[]
+}
+
 
 // ----------------------------------- _Literals_ ----------------------------------- \\
 

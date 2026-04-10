@@ -41,6 +41,7 @@ export class Lexer {
         met   : TKind.Met,
         ret   : TKind.Ret,
         model : TKind.Model,
+        alias : TKind.Alias
 
     }
 
