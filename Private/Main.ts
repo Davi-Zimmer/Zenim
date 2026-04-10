@@ -40,13 +40,14 @@ let code = `
   
     met int sum( int a, int b ){
 
-        if( true ){
+        match( 1 ){
 
-            ret 1;
-        } else {
-        
-            
+            1: ret 1;
+            2: {};
+
         }
+
+        ret 0;
 
     }
 

@@ -80,3 +80,17 @@ Match( 1 ){
     };
 
 }
+
+
+met int sum( int a, int b ){
+
+    match( 1 ){
+
+        1: ret 1;
+        2: {};
+
+    }
+
+    ret 0;
+
+}

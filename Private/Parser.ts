@@ -827,7 +827,7 @@ class Parser {
 
         }
 
-        this.consume( TKind.Semicolon )
+        // this.consume( TKind.Semicolon )
 
         this.consume( TKind.RightBrace )
 
