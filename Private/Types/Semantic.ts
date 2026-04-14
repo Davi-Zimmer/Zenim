@@ -12,7 +12,7 @@ export type SemanticType =
     | { base: 'any'   | null, nullable: boolean, span: Span, type: 'data' }
     | { base: 'model' | null, nullable: boolean, span: Span, model: ModelSymbol, type: 'data' }
     | { base: 'list'  | null, nullable: boolean, span: Span, inner: SemanticType, size: number, type: 'data' }
-
+    | { base: 'object'| null, nullable: boolean, span: Span, type: 'data', props: Map< string, SemanticType > }
 
 export type FieldInfo = {
     identifier   : LiteralIdentifier

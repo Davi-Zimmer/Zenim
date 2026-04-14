@@ -1,5 +1,5 @@
 import { convertToObject, textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -97,9 +97,9 @@ class Parser {
     }
 
     private statement(){
-
+        
         if( this.check( TKind.Match ) ) return this.matchStatement()
-
+            
         if( this.check( TKind.Ret ) ) return this.__returnStatement()
 
         if( this.check( TKind.Break ) ) return this.breakStatement()
@@ -358,7 +358,7 @@ class Parser {
     }
   
     private tryParseType() {
-        
+
         const checkpoint = this.current
         
         try {
@@ -371,6 +371,8 @@ class Parser {
                 
                 return false
             }
+
+            this.current = checkpoint
 
             return true
             
@@ -443,46 +445,104 @@ class Parser {
 
     }
 
+    private parseListInitialization(): LiteralList{
+
+        const array: Expr[] = []
+
+        const spanStart = this.getPreviousSpan()
+
+        while( !this.check( TKind.RightBracket ) && ! this.isAtEnd() ){
+
+            array.push( 
+
+                this.expression()
+            
+            )
+
+            if( this.check( TKind.Comma ) ) {
+
+                this.consume( TKind.Comma )
+
+                continue
+
+            }
+
+        }
+
+        this.consume( TKind.RightBracket )
+
+        return {
+            kind: AstKind.LiteralList,
+            list: array,
+            size: array.length,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+
+        }
+
+    }
+
+    private parseModelFieldVarDeclaration(): ObjectProps {
+
+        const identifier = this.parseIdentifier()
+
+        const spanStart = this.getPreviousSpan()
+
+        this.consume( TKind.Colon )
+
+        const expr = this.expression()
+
+        return {
+            kind: AstKind.ObjectProps,
+            identifier,
+            item: expr,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+
+        }
+
+    }
+
+    private parseLiteralModel(): LiteralModel {
+
+        const expr: ObjectProps[] = []        
+
+        const spanStart = this.getPreviousSpan()
+
+        while( !this.check( TKind.RightBrace ) && !this.isAtEnd() ){
+
+            expr.push(
+
+                this.parseModelFieldVarDeclaration()
+
+            )
+
+            if( this.check( TKind.RightBrace ) ) break
+
+            if( this.check( TKind.Comma ) ) this.consume( TKind.Comma )
+
+        }
+        
+        this.consume( TKind.RightBrace )
+
+        return {
+            kind: AstKind.LiteralModel,
+            modelItems: expr,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+
+        }
+
+    }
+
     private parseInitializer(){
 
         let initializer: undefined | Expr
 
         if( this.match( TKind.Equals ) ){
 
-            if( this.match( TKind.LeftBracket ) ){
-    
-                const array: Expr[] = []
+            if( this.match( TKind.LeftBracket ) ) initializer = this.parseListInitialization()
 
-                const spanStart = this.getPreviousSpan()
+            if( this.match( TKind.LeftBrace ) ) initializer = this.parseLiteralModel()
 
-                while( !this.check( TKind.RightBracket ) && ! this.isAtEnd() ){
-
-                    array.push( this.expression() )
-
-                    if( this.check( TKind.Comma ) ) {
-
-                        this.consume( TKind.Comma )
-
-                        continue
-
-                    }
-
-                }
-
-                this.consume( TKind.RightBracket )
-
-                initializer = {
-                    kind: AstKind.LiteralList,
-                    list: array,
-                    size: array.length,
-                    span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
-                } as LiteralList
-
-            } else {
-
-                initializer = this.expression()
-            
-            }
+            else initializer = this.expression()
 
         }
 
@@ -1268,7 +1328,7 @@ class Parser {
         
         let expr = this.primary()
 
-        while( true ){
+        while( !this.isAtEnd() ){
 
             if( this.match( TKind.LeftParen ) ){
 
@@ -1298,7 +1358,6 @@ class Parser {
 
         return expr
 
-
     }
 
     private primary(): Expr {
@@ -1321,13 +1380,50 @@ class Parser {
         
         if( this.match( TKind.Identifier ) ) return this.primaryIdentifier()
 
+        if( this.match( TKind.LeftBrace ) ) return this.primaryLiteralModel()
+
+
         throw new Error(`Expected Expression but it came "${ this.peek().kind }" ${this.errorLocation()}`)
         
     }
 
-    private finishCall( callee: Expr ){ // fazer dps
+    private parseParams(){
+
+        const args: Expr[] = []
+
+        if( !this.check( TKind.RightParen ) ){
+
+            do {
+
+                args.push(
+
+                    this.expression()
+
+                )
+
+            } while( this.match( TKind.Comma ) )
+
+        }
+
+        this.consume( TKind.RightParen )
+
+        return args
+
+    }
+
+    private finishCall( callee: Expr ): CallExpression {
         
-        return callee
+        const spanStart = this.tokenToSpan( this.peek() )
+
+        const args = this.parseParams()
+
+        return {
+            kind: AstKind.CallExpression,
+            callee,
+            args,
+            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+
+        }
 
     }
 
@@ -1390,6 +1486,14 @@ class Parser {
             span: this.tokenToSpan( p )
 
         } as LiteralIdentifier
+
+    }
+
+    private primaryLiteralModel(){
+
+        const a = this.previus()
+
+        return this.parseLiteralModel()
 
     }
 

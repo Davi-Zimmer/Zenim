@@ -8,14 +8,17 @@
 
 ### To Do 
 
+
+
 #### DO NOW
-alias (type)
+- model declaration
+
+
 
 #### To Finish
 - pointer / references
 - float / double
 - call Methods
-- model declaration
 - once
 
 
@@ -32,6 +35,15 @@ alias (type)
 - ` to strings
 - generics model
 
+a.b.c.a()
+
+X( a + 1 );
+
+XModel myModel = {
+    x: 14,
+    y: 10
+};
+
 ### Done
 - primitive types ( except double/float )
 - pointers ( half )
@@ -47,6 +59,7 @@ alias (type)
 - method
 - ret
 - model + composition
+- alias (type)
 
 
 

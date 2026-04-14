@@ -34,23 +34,38 @@ function loadCode( fileName: string ){
 // 1..(bool?) list = [ true, null ];
 // 3..bool b = [ true, false, maybe ];
 // ..(..int) test = [ [] ]; // da erro ainda
-
 // ret a + b;
+
+
+/*
+model x {
+    int a
+};
+
+x.a;
+*/
+
+
+
 let code = `
+    
+    model X {
+        char a
+    };
 
-    alias(
-        a: int,
-        b: int,
-        c: int
-    );
+    model ModelType {
+        int a,
+        X t
+    };
 
-
-   alias X: int;
-
-   X? test;
-   
-   X test; // nullable error
-
+    
+    // t: {}; ainda da erro
+    ModelType obj = {
+        a: 1,
+        t: {
+            a: '.'
+        }
+    };
 
 `
 

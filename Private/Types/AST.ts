@@ -10,6 +10,8 @@ export enum AstKind {
     LiteralNull       = "LiteralNull",
     LiteralIdentifier = "LiteralIdentifier",
     LiteralList       = "LiteralList",
+    LiteralModel      = "LiteralModel",
+
 
     // LiteralDouble    = "LiteralDouble",
     // LiteralFloat     = "LiteralFloat",
@@ -37,8 +39,10 @@ export enum AstKind {
     ModelFieldDeclaration = "ModelFieldDeclaration",
     AliasStatement        = "AliasStatement",
     AliasItem             = "AliasItem",
-
+    CallExpression        = "CallExpression",
+    ObjectProps           = "ObjectProps",
     
+
     MemberAccess        = "MemberAccess",
     VariableDeclaration = "VariableDeclaration",
     MethodDeclaration   = "MethodDeclaration",
@@ -209,6 +213,12 @@ export interface LiteralList extends Expr {
     size: number
 }
 
+export interface LiteralModel extends Expr {
+    kind       : AstKind.LiteralModel
+    modelItems : ObjectProps[]
+    span       : Span
+}
+
 
 export type LiteralValue = LiteralBool | LiteralString | LiteralChar | LiteralNumber | LiteralVoid | LiteralNull | LiteralBool // | LiteralFloat | LiteralDouble
 
@@ -235,7 +245,7 @@ export interface RangeExpression extends Expr {
     span  : Span
 }
 
-export interface MemberAccess {
+export interface MemberAccess extends Expr {
     kind   : AstKind.MemberAccess
     object : Expr
     member : string
@@ -260,6 +270,18 @@ export interface ReturnStatement extends Expr {
     expr: Expr
 }
 
+export interface CallExpression extends Expr {
+    kind   : AstKind.CallExpression
+    callee : Expr
+    args   : Expr[]
+}
+
+export interface ObjectProps extends Expr {
+    kind       : AstKind.ObjectProps
+    item       : Expr
+    identifier : LiteralIdentifier
+    span       : Span
+}
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
 export type TypeAST =
