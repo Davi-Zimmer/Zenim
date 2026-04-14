@@ -1,10 +1,8 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement } from "./Types/AST.js"
-import { FieldInfo, Flow, SemanticType, ModelSymbol } from "./Types/Semantic.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps } from "./Types/AST.js"
+import { Flow, SemanticType, ModelSymbol } from "./Types/Semantic.js"
 
-type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model'
-
-
+type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model' | 'object'
 
 class SemanticAnalizer {
 
@@ -103,14 +101,17 @@ class SemanticAnalizer {
     }
 
     private resolveType( node: TypeAST ): SemanticType { /////////////////// coisar o model aq
-    
+        // console.log( node )
+        
         switch( node.kind ){
             
             case 'Base': return { 
                 base: node.name,
                 nullable: false,
                 span: node.span,
-                type: 'data' 
+                type: 'data',
+                //base: 'model',
+                // model: this.getModel( node.name, node.span ) 
             } as SemanticType
 
             case 'Nullable': {
@@ -290,8 +291,56 @@ class SemanticAnalizer {
 
     }
 
-    private analyzeExpression( node: Expr , scope: Scope ): SemanticType {
+    private analyzeMemberAccess( node: MemberAccess ){
 
+        const objectType = this.analyzeExpression( node.object, this.scopeStack.scope )
+
+        /// throw new Error(`Type '${objectType.base}' has no members`)
+
+        if( objectType.base !== 'model' ) return {
+            base: null,
+            nullable: false,
+            span: node.span,
+            type: 'data' 
+        }
+
+        console.log( objectType )
+
+
+        return {} as any
+
+    }
+
+    private analyzeLiteralModel( node: LiteralModel ): SemanticType {
+
+        const props = new Map< string, SemanticType >()
+
+        for( const item of node.modelItems ){
+
+            const valueType = this.analyzeExpression( item, this.scopeStack.scope )
+
+            if( !valueType.base ) {
+
+                throw new Error(`Cannot resolve type of property '${ item.identifier.name }' ${ this.errorLocation( valueType.span ) }`)
+
+            }
+
+            props.set( item.identifier.name, valueType )
+
+        }
+
+        return {
+            base: 'object',
+            nullable: false,
+            props,
+            type: "data",
+            span: node.span
+
+        }
+
+    }
+
+    private analyzeExpression( node: Expr , scope: Scope ): SemanticType {
 
         switch( node.kind ) {
 
@@ -337,6 +386,14 @@ class SemanticAnalizer {
                 type: 'data' 
             }
 
+            case AstKind.ObjectProps: {
+
+                const n = node as ObjectProps
+
+                return this.analyzeExpression( n.item, scope )
+
+            }
+
             case AstKind.LiteralList: return this.analyzeList( node as LiteralList, scope )
 
             case AstKind.BinaryExpression: return this.anayizeBinary( ( node as BinaryExpression ), scope )
@@ -345,15 +402,13 @@ class SemanticAnalizer {
 
             case AstKind.LiteralIdentifier: {
 
-                const n = ( node as LiteralIdentifier ) 
+                const n = ( node as AstType ) 
 
                 const symbolVar = this.scopeStack.scope.resolveVar( n.name )
                 if( symbolVar ) return this.resolveType( symbolVar.kind )
-                
 
                 const symbolMethod = this.scopeStack.scope.resolveMethod( n.name )
                 if( symbolMethod ) return this.resolveType( symbolMethod.returns )
-
 
                 const symbolModel = this.scopeStack.scope.resolveModel( n.name )
                 if( symbolModel ) return {
@@ -368,6 +423,9 @@ class SemanticAnalizer {
                 throw new Error(`Identifier '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
     
             }
+
+            case AstKind.LiteralModel: return this.analyzeLiteralModel( node as LiteralModel )
+            // case AstKind.MemberAccess : return this.analyzeMemberAccess( node as MemberAccess )
 
             default: return {
                 base: null,
@@ -520,8 +578,8 @@ class SemanticAnalizer {
     private checkIdentifierExists( node: VariableDeclaration | MethodDeclaration | MethodParams | ModelDeclaration | ModelFieldDeclaration | AliasItem ){
 
         if( 
-            this.scopeStack.scope.resolveLocalVar  ( node.identifier.name ) ||
-            this.scopeStack.scope.resolveLocalModel( node.identifier.name ) ||
+            this.scopeStack.scope.resolveLocalVar    ( node.identifier.name ) ||
+            this.scopeStack.scope.resolveLocalModel  ( node.identifier.name ) ||
             this.scopeStack.scope.resolveLocalMethod ( node.identifier.name )
         ){
 
@@ -541,13 +599,73 @@ class SemanticAnalizer {
 
     }
 
+    private analyzeObjectCompatibility( model: SemanticType, object: SemanticType ){
+        
+        if( object.base === 'object' ){
+
+            let m = this.scopeStack.scope.resolveModel( model.base! )
+
+            if( !m ) throw new Error(`Model '${ m }' does not exist ${ model.span }`)
+
+            for( const [ key, targetProp ] of m.fields ){
+
+                const objPropType = object.props.get( key )
+
+                if( !objPropType ){
+
+                    throw new Error(`Missing property '${ key }' in literal object ${ this.errorLocation( object.span ) }`)
+
+                }
+
+                const resolvedTargProp = this.resolveType( targetProp.type )
+                
+                if( !this.isAssignable( resolvedTargProp, objPropType ) ){
+                    
+                    const aType = targetProp.type
+
+                    console.log( aType )
+
+                    if( aType.kind === 'Base' ){
+
+                        throw new Error(`Property '${ objPropType.base }' is not assignable with type '${ aType.name }' ${ this.errorLocation( objPropType.span ) }`)
+                        
+                    }
+
+                    // throw new Error(`Literal object property named ${ key } is not assignable with type ${} ${ this.errorLocation( objPropType.span ) }`)
+                    
+                    throw new Error(`Error in Error XD`)
+
+                }
+                
+            }
+
+            for( const [ key ] of object.props ){
+
+                if( !m.fields.has( key ) ){
+
+                    throw new Error(`Model '${ model.base }' does not have '${ key }' field ${ this.errorLocation( object.span ) }`)
+
+                }
+
+            }
+            
+            return true
+
+        }
+
+        throw new Error(`Objets are not compatible ${ this.errorLocation( object.span ) }`)
+
+    }
+
     private checkInitializer( node: VariableDeclaration | MethodParams | ModelFieldDeclaration, type: SemanticType ){
 
         if( node.initializer ){
 
             const initializer = this.analyzeExpression( node.initializer, this.scopeStack.scope )
 
-            if( initializer.base !== type.base ) throw new Error(`Type '${type.base}' is not compatible with '${initializer.base}' ${this.errorLocation( node.span )}`)
+            const isCompatible = this.analyzeObjectCompatibility( type, initializer )
+
+            if( !isCompatible  ) throw new Error(`Type '${type.base}' is not compatible with '${initializer.base}' ${this.errorLocation( node.span )}`)
 
             if( initializer.base === 'list' && type.base === 'list' ){
 
@@ -567,6 +685,7 @@ class SemanticAnalizer {
             } 
 
         }
+        
     }
 
     /*
@@ -604,6 +723,7 @@ class SemanticAnalizer {
         this.checkIdentifierExists( node )
 
         const type = this.resolveType( node.type )
+
 
         this.checkTypeExist( node, type )
 
@@ -1142,6 +1262,18 @@ class SemanticAnalizer {
 
     }
 
+    private expressionStatement( node: ExpressionStatement ){
+        /*
+        // console.log( JSON.stringify( node.expression, null, 3  ) )
+
+        const a = this.analyzeExpression( node.expression, this.scopeStack.scope )
+
+        
+        console.log( JSON.stringify( a, null, 3  ) )
+        */
+
+    }
+
     // ----------------------------------- Literals ----------------------------------- \\
 
     private literalNumber( node: LiteralNumber ) {
@@ -1180,7 +1312,7 @@ class SemanticAnalizer {
     
     }
 
-    private literalIdentifier( node: LiteralIdentifier ){
+    private literalIdentifier( node: AstType ){
         
         return this.analyzeExpression( node, this.scopeStack.scope )
         

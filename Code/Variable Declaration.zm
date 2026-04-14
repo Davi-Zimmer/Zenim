@@ -110,3 +110,18 @@ model Point3D : Point2D {
 model Test {
     Point2D p
 };
+
+
+
+alias(
+    a: int,
+    b: int,
+    c: int
+);
+
+
+alias X: int;
+
+X? test;
+
+X test; // nullable error
