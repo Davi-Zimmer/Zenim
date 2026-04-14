@@ -2,7 +2,7 @@ import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
 import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps } from "./Types/AST.js"
 import { Flow, SemanticType, ModelSymbol } from "./Types/Semantic.js"
 
-type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model' | 'object'
+type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model' | 'object' | 'alias'
 
 class SemanticAnalizer {
 
@@ -136,17 +136,31 @@ class SemanticAnalizer {
 
                 const model = this.scopeStack.scope.resolveModel( node.name )
 
-                if( !model ) throw new Error(`Model '${ node.name }' does not exist ${ this.errorLocation( node.span ) }`)
+                if( model )  {
+                    return {
+                        base: 'model',
+                        nullable: false,
+                        span: node.span,
+                        type: 'data',
+                        model
 
-                return {
+                    }
+                }
 
-                    base: 'model',
-                    nullable: false,
-                    span: node.span,
-                    type: 'data',
-                    model
+                const alias = this.scopeStack.scope.resolveAlias( node.name )
+                
+                if( alias )  {
+                    return {
+                        base: 'alias',
+                        nullable: false,
+                        span: node.span,
+                        type: 'data',
+                        alias
+                    }
 
-                }                
+                }
+
+                throw new Error(`Type '${ node.name }' does not exist ${ this.errorLocation( node.span ) }`)
 
             }
 
@@ -199,8 +213,9 @@ class SemanticAnalizer {
             type === 'null'  ||
             type === 'list'  ||
             type === 'model' ||
-            //!( !this.scopeStack.scope.resolveModel( type! ) ) ||
-            !( !this.scopeStack.scope.resolveAlias( type! ) )
+            type === 'alias'
+            // !( !this.scopeStack.scope.resolveModel( type! ) ) ||
+            // !( !this.scopeStack.scope.resolveAlias( type! ) )
         )
 
     }
@@ -524,19 +539,30 @@ class SemanticAnalizer {
 
     }
 
+    private resolveAssignableAlias( alias: SemanticType, base: SemanticType ) {
+
+        if( alias.base !== 'alias' ) return false
+
+        const aliasType = this.resolveType( alias.alias.type )
+
+        return this.isAssignable( aliasType, base )
+
+    }
+
     private isAssignable( a: SemanticType, b: SemanticType ): boolean {
         
         if( b.base === 'any' ) return true
         
-        if( a.base === null ) return a.nullable 
+        if( a.base === null ) return a.nullable
         
-        if( a.base === 'model' && b.base === 'object' ) return this.resolveAssignableObject( a, b )
+        if( a.base === 'alias' ) return this.resolveAssignableAlias( a, b )
+        if( b.base === 'alias' ) return this.resolveAssignableAlias( b, a )
 
+        if( a.base === 'model' && b.base === 'object' ) return this.resolveAssignableObject( a, b )
         
         if( a.base === 'list' && b.base === 'list' ) return this.isAssignable( a.inner, b.inner )
                 
         if( a.base === 'model' && b.base === 'model' ) return a.model === b.model
-                
 
         return a.base === b.base 
 
@@ -687,19 +713,13 @@ class SemanticAnalizer {
 
     }
 
-    private analyzeObjectCompatibility( model: SemanticType, object: SemanticType ){
-        
-        return this.isAssignable( model, object )
-
-    }
-
     private checkInitializer( node: VariableDeclaration | MethodParams | ModelFieldDeclaration, type: SemanticType ){
 
         if( node.initializer ){
 
             const initializer = this.analyzeExpression( node.initializer, this.scopeStack.scope )
 
-            const isCompatible = this.analyzeObjectCompatibility( type, initializer )
+            const isCompatible = this.isAssignable( type, initializer )
 
             if( !isCompatible  ) throw new Error(`Type '${type.base}' is not compatible with '${initializer.base}' ${this.errorLocation( node.span )}`)
 
