@@ -59,11 +59,10 @@ let code = `
     };
 
     
-    // t: {}; ainda da erro
     ModelType obj = {
         a: 1,
         t: {
-            a: '.'
+            a: '1'
         }
     };
 

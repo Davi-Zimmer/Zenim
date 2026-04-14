@@ -75,6 +75,22 @@ class SemanticAnalizer {
 
     // ------------------------------------------ Helpers ------------------------------------------ \\
 
+    private isPrimitive( s: string ) {
+
+        return (
+            s == 'str'  || 
+            s == 'bool' || 
+            s == 'char' || 
+            s == 'void' || 
+            s == 'null' || 
+            s == 'int'  || 
+            s == 'flt'  || 
+            s == 'dbl'  || 
+            s == 'list' || 
+            s == 'any'
+        )
+    }
+
     private modifiersAllowedIn: Record< string, Set< string > > = {
         Global : new Set([ 'Mut', 'Once' ]),
         Model  : new Set([ 'Mut', 'Once' ])
@@ -101,18 +117,38 @@ class SemanticAnalizer {
     }
 
     private resolveType( node: TypeAST ): SemanticType { /////////////////// coisar o model aq
-        // console.log( node )
-        
+
         switch( node.kind ){
             
-            case 'Base': return { 
-                base: node.name,
-                nullable: false,
-                span: node.span,
-                type: 'data',
-                //base: 'model',
-                // model: this.getModel( node.name, node.span ) 
-            } as SemanticType
+            case 'Base': {
+
+                if( this.isPrimitive( node.name ) ){
+
+                    return { 
+                        base: node.name,
+                        nullable: false,
+                        span: node.span,
+                        type: 'data',
+
+                    } as SemanticType
+
+                }
+
+                const model = this.scopeStack.scope.resolveModel( node.name )
+
+                if( !model ) throw new Error(`Model '${ node.name }' does not exist ${ this.errorLocation( node.span ) }`)
+
+                return {
+
+                    base: 'model',
+                    nullable: false,
+                    span: node.span,
+                    type: 'data',
+                    model
+
+                }                
+
+            }
 
             case 'Nullable': {
                 const inner = this.resolveType( node.inner )
@@ -162,7 +198,8 @@ class SemanticAnalizer {
             type === 'void'  ||
             type === 'null'  ||
             type === 'list'  ||
-            !( !this.scopeStack.scope.resolveModel( type! ) ) ||
+            type === 'model' ||
+            //!( !this.scopeStack.scope.resolveModel( type! ) ) ||
             !( !this.scopeStack.scope.resolveAlias( type! ) )
         )
 
@@ -304,9 +341,6 @@ class SemanticAnalizer {
             type: 'data' 
         }
 
-        console.log( objectType )
-
-
         return {} as any
 
     }
@@ -438,19 +472,73 @@ class SemanticAnalizer {
 
     }
 
-    private isAssignable( a: SemanticType, b: SemanticType ): boolean {
+    private resolveAssignableObject( model: SemanticType, object: SemanticType ){
+        
+        if( object.base === 'object' && model.base === 'model' ){
 
+            for( const [ key, targetProp ] of model.model.fields ){
+
+                const objPropType = object.props.get( key )
+
+                if( !objPropType ){
+
+                    throw new Error(`Missing property '${ key }' in literal object ${ this.errorLocation( object.span ) }`)
+
+                }
+
+                const resolvedTargProp = this.resolveType( targetProp.type )
+                
+                if( !this.isAssignable( resolvedTargProp, objPropType ) ){
+                    
+                    const aType = targetProp.type
+
+                    if( aType.kind === 'Base' ){
+
+                        throw new Error(`Property '${ objPropType.base }' is not assignable with type '${ aType.name }' ${ this.errorLocation( objPropType.span ) }`)
+                        
+                    }
+
+                    // throw new Error(`Literal object property named ${ key } is not assignable with type ${} ${ this.errorLocation( objPropType.span ) }`)
+                    
+                    throw new Error(`Error in Error XD`)
+
+                }
+                
+            }
+
+            for( const [ key ] of object.props ){
+
+                if( !model.model.fields.has( key ) ){
+
+                    throw new Error(`Model '${ model.base }' does not have '${ key }' field ${ this.errorLocation( object.span ) }`)
+
+                }
+
+            }
+            
+            return true
+
+        }
+
+        return false
+
+    }
+
+    private isAssignable( a: SemanticType, b: SemanticType ): boolean {
+        
         if( b.base === 'any' ) return true
         
         if( a.base === null ) return a.nullable 
         
-        if( a.base !== b.base ) return false
+        if( a.base === 'model' && b.base === 'object' ) return this.resolveAssignableObject( a, b )
 
-        if( a.base === 'list' && b.base === 'list' ) return this.isAssignable( a.inner, b.inner )
         
+        if( a.base === 'list' && b.base === 'list' ) return this.isAssignable( a.inner, b.inner )
+                
         if( a.base === 'model' && b.base === 'model' ) return a.model === b.model
+                
 
-        return true
+        return a.base === b.base 
 
     }
 
@@ -601,59 +689,7 @@ class SemanticAnalizer {
 
     private analyzeObjectCompatibility( model: SemanticType, object: SemanticType ){
         
-        if( object.base === 'object' ){
-
-            let m = this.scopeStack.scope.resolveModel( model.base! )
-
-            if( !m ) throw new Error(`Model '${ m }' does not exist ${ model.span }`)
-
-            for( const [ key, targetProp ] of m.fields ){
-
-                const objPropType = object.props.get( key )
-
-                if( !objPropType ){
-
-                    throw new Error(`Missing property '${ key }' in literal object ${ this.errorLocation( object.span ) }`)
-
-                }
-
-                const resolvedTargProp = this.resolveType( targetProp.type )
-                
-                if( !this.isAssignable( resolvedTargProp, objPropType ) ){
-                    
-                    const aType = targetProp.type
-
-                    console.log( aType )
-
-                    if( aType.kind === 'Base' ){
-
-                        throw new Error(`Property '${ objPropType.base }' is not assignable with type '${ aType.name }' ${ this.errorLocation( objPropType.span ) }`)
-                        
-                    }
-
-                    // throw new Error(`Literal object property named ${ key } is not assignable with type ${} ${ this.errorLocation( objPropType.span ) }`)
-                    
-                    throw new Error(`Error in Error XD`)
-
-                }
-                
-            }
-
-            for( const [ key ] of object.props ){
-
-                if( !m.fields.has( key ) ){
-
-                    throw new Error(`Model '${ model.base }' does not have '${ key }' field ${ this.errorLocation( object.span ) }`)
-
-                }
-
-            }
-            
-            return true
-
-        }
-
-        throw new Error(`Objets are not compatible ${ this.errorLocation( object.span ) }`)
+        return this.isAssignable( model, object )
 
     }
 
