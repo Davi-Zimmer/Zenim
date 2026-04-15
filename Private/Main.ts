@@ -49,7 +49,15 @@ x.a;
 
 let code = `
     
+    model Player {
+        int life
+    };
 
+    Player p = {
+        life: 100
+    };
+
+    int a = p.life;
 
 `
 

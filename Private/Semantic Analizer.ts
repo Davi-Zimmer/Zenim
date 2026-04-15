@@ -343,20 +343,29 @@ class SemanticAnalizer {
 
     }
 
-    private analyzeMemberAccess( node: MemberAccess ){
+    private analyzeMemberAccess( node: MemberAccess ): SemanticType {
 
         const objectType = this.analyzeExpression( node.object, this.scopeStack.scope )
 
         /// throw new Error(`Type '${objectType.base}' has no members`)
 
-        if( objectType.base !== 'model' ) return {
-            base: null,
-            nullable: false,
-            span: node.span,
-            type: 'data' 
+        if( objectType.base !== 'model' ){
+
+            throw new Error(`Type '${ objectType.base }' has no members ${ this.errorLocation( objectType.span ) }`)
+
         }
 
-        return {} as any
+        if( node.kind !== AstKind.MemberAccess ) throw new Error('???')
+            
+        const a = objectType.model.fields.get( node.member )
+
+        if( !a ) {
+
+            throw new Error(`Type '${ objectType.model.identifier.name }' has no member named '${ node.member }' ${ this.errorLocation( node.span ) }`)
+
+        }
+
+        return this.resolveType( a.type )
 
     }
 
@@ -388,6 +397,62 @@ class SemanticAnalizer {
         }
 
     }
+
+    private analyzeObjectProps( node: ObjectProps ): SemanticType {
+        
+        const item = this.analyzeExpression( node.item, this.scopeStack.scope )
+
+        if( !item ) return {
+            base: 'null',
+            nullable: false,
+            span: node.span,
+            type: 'data'
+        }
+
+        return item
+
+        /*
+        console.log( item )
+
+        if( item.base !== 'model' ){
+
+
+        }
+
+        /*
+            if( item.base === 'object' ){
+
+                const d = item.props.get( node.identifier.name )
+
+                if( !d ) {
+
+                    throw new Error(`Type '${ item.base }' has no member named '${ node.identifier.name }' ${ this.errorLocation( node.identifier.span ) }`)
+
+                }
+
+
+            }
+        //*
+
+        if( item.base === 'model' ){
+
+            const d = item.model.fields.get( node.identifier.name )
+
+            if( !d ) {
+
+                throw new Error(`Type '${ item.model.identifier.name }' has no member named '${ node.identifier.name }' ${ this.errorLocation( node.identifier.span ) }`)
+
+            }
+
+            return this.resolveType( d.type )
+
+        }
+
+
+        return item
+        */
+    }
+
 
     private analyzeExpression( node: Expr , scope: Scope ): SemanticType {
 
@@ -435,13 +500,9 @@ class SemanticAnalizer {
                 type: 'data' 
             }
 
-            case AstKind.ObjectProps: {
+            case AstKind.MemberAccess: return this.analyzeMemberAccess( node as MemberAccess )
 
-                const n = node as ObjectProps
-
-                return this.analyzeExpression( n.item, scope )
-
-            }
+            case AstKind.ObjectProps: return this.analyzeObjectProps( node as ObjectProps )
 
             case AstKind.LiteralList: return this.analyzeList( node as LiteralList, scope )
 
@@ -1364,14 +1425,8 @@ class SemanticAnalizer {
     }
 
     private expressionStatement( node: ExpressionStatement ){
-        /*
-        // console.log( JSON.stringify( node.expression, null, 3  ) )
-
-        const a = this.analyzeExpression( node.expression, this.scopeStack.scope )
-
         
-        console.log( JSON.stringify( a, null, 3  ) )
-        */
+        return this.analyzeExpression( node.expression, this.scopeStack.scope )
 
     }
 
