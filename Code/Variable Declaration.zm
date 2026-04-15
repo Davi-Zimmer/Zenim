@@ -125,3 +125,33 @@ alias X: int;
 X? test;
 
 X test; // nullable error
+
+alias X: int;
+alias Y: int;
+
+alias Z: X;
+
+X xis = 0;
+Y ips = xis;
+
+Z ze = ips;
+
+
+model X {
+    int Test,
+    int f
+};
+
+model Y {
+    int Test,
+
+};
+
+alias modelX: X;
+
+modelX teste = {
+    Test: 1,
+    f: 1
+};
+
+Y ips = teste; // err não tem 'f' em Y

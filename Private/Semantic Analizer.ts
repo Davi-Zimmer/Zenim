@@ -549,6 +549,51 @@ class SemanticAnalizer {
 
     }
 
+    private resolveAssignableModel( a: SemanticType, b: SemanticType ){
+
+        if( a.base === 'model' && b.base === 'model' ){
+            
+            for( const [ key, targProp ] of a.model.fields ){
+
+                const objPropType = b.model.fields.get( key )
+
+                if( !objPropType ){
+
+                    throw new Error(`Missing property '${ key }' in model '${ b.model.identifier.name }' ${ this.errorLocation( b.span ) }`)
+
+                }
+
+                const resolvedTargProp = this.resolveType( targProp.type )
+
+                const resolvedobjPropType = this.resolveType( targProp.type )
+
+                if( !this.isAssignable( resolvedTargProp, resolvedobjPropType ) ){
+                    
+                    throw new Error(`Property '${ key }' is not assignable with type '${ targProp.identifier.name }' ${ this.errorLocation( b.span ) }`)
+                        
+                }
+
+            }
+
+            for( const [ key ] of b.model.fields ){
+
+                if( !a.model.fields.has( key ) ) {
+
+                    throw new Error(`Model '${ a.model.identifier.name }' does not have '${ key }' field ${ this.errorLocation( a.span ) }`)
+
+                }
+
+            }
+
+             
+            return true
+
+        }
+
+        return false
+
+    }
+
     private isAssignable( a: SemanticType, b: SemanticType ): boolean {
         
         if( b.base === 'any' ) return true
@@ -562,7 +607,7 @@ class SemanticAnalizer {
         
         if( a.base === 'list' && b.base === 'list' ) return this.isAssignable( a.inner, b.inner )
                 
-        if( a.base === 'model' && b.base === 'model' ) return a.model === b.model
+        if( a.base === 'model' && b.base === 'model' ) return this.resolveAssignableModel( a, b )
 
         return a.base === b.base 
 

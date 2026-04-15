@@ -49,15 +49,6 @@ x.a;
 
 let code = `
     
-    alias X: int;
-    alias Y: int;
-
-    alias Z: X;
-
-    X xis = 0;
-    Y ips = xis;
-
-    Z ze = ips;
 
 
 `
