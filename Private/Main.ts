@@ -49,22 +49,16 @@ x.a;
 
 let code = `
     
-    model X {
-        char a
-    };
+    alias X: int;
+    alias Y: int;
 
-    model ModelType {
-        int a,
-        X t
-    };
+    alias Z: X;
 
-    
-    ModelType obj = {
-        a: 1,
-        t: {
-            a: '1'
-        }
-    };
+    X xis = 0;
+    Y ips = xis;
+
+    Z ze = ips;
+
 
 `
 
