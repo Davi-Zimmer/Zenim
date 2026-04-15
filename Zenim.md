@@ -11,7 +11,6 @@
 
 
 #### DO NOW
-- model declaration
 
 
 
@@ -35,15 +34,6 @@
 - ` to strings
 - generics model
 
-a.b.c.a()
-
-X( a + 1 );
-
-XModel myModel = {
-    x: 14,
-    y: 10
-};
-
 ### Done
 - primitive types ( except double/float )
 - pointers ( half )
@@ -60,6 +50,8 @@ XModel myModel = {
 - ret
 - model + composition
 - alias (type)
+- model declaration
+- a.b.c.a
 
 
 

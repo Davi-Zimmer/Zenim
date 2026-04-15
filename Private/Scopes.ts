@@ -190,8 +190,6 @@ export class Scope {
     public isKind( ...kinds: ScopeKinds[] ){
 
         for( const kind of kinds ){
-            
-            console.log( this.kind, kind )
 
             if( this.kind === kind ) return true
 
@@ -219,9 +217,6 @@ export class ScopeStack {
     public push( kind: Scope['kind'] = ScopeKinds.Block ){
 
         this.current = new Scope( this.current, kind )
-
-        console.log( this.current.kind )
-
 
         return this.current
 
