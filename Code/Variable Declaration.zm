@@ -155,3 +155,15 @@ modelX teste = {
 };
 
 Y ips = teste; // err não tem 'f' em Y
+
+
+
+model Player {
+    int life
+};
+
+Player p = {
+    life: 100
+};
+
+int a = p.life;

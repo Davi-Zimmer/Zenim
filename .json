@@ -2,49 +2,62 @@
    "kind": "Program",
    "body": [
       {
-         "kind": "ExpressionStatement",       
-         "expression": {
-            "kind": "CallExpression",
-            "callee": {
-               "kind": "MemberAccess",        
-               "member": "b",
-               "object": {
-                  "kind": "LiteralIdentifier",
-                  "name": "a",
-                  "span": {
-                     "start": {
-                        "line": 3,
-                        "column": 5
-                     },
-                     "end": {
-                        "line": 3,
-                        "column": 6
-                     }
-                  }
-               },
-               "span": {
-                  "start": {
-                     "line": 3,
-                     "column": 5
-                  },
-                  "end": {
-                     "line": 3,
-                     "column": 8
-                  }
-               }
-            },
-            "args": [
+         "kind": "MethodDeclaration",
+         "body": {
+            "kind": "BlockStatement",
+            "body": [
                {
-                  "kind": "LiteralNumber",
-                  "value": 1,
+                  "kind": "__ReturnStatement",  
+                  "expr": {
+                     "kind": "BinaryExpression",
+                     "left": {
+                        "kind": "LiteralIdentifier",
+                        "name": "a",
+                        "span": {
+                           "start": {
+                              "line": 5,
+                              "column": 13
+                           },
+                           "end": {
+                              "line": 5,
+                              "column": 14
+                           }
+                        }
+                     },
+                     "operator": "+",
+                     "right": {
+                        "kind": "LiteralIdentifier",
+                        "name": "b",
+                        "span": {
+                           "start": {
+                              "line": 5,
+                              "column": 17
+                           },
+                           "end": {
+                              "line": 5,
+                              "column": 18
+                           }
+                        }
+                     },
+                     "span": {
+                        "start": {
+                           "line": 5,
+                           "column": 13
+                        },
+                        "end": {
+                           "line": 5,
+                           "column": 18
+                        }
+                     }
+                  },
                   "span": {
                      "start": {
-                        "line": 3,
-                        "column": 10
+                        "line": 5,
+                        "column": 9
                      },
                      "end": {
-                        "line": 3,
-                        "column": 11
+                        "line": 5,
+                        "column": 19
                      }
                   }
                }
@@ -52,11 +65,200 @@
             "span": {
                "start": {
                   "line": 3,
-                  "column": 10
+                  "column": 33
+               },
+               "end": {
+                  "line": 7,
+                  "column": 6
+               }
+            }
+         },
+         "identifier": {
+            "kind": "LiteralIdentifier",
+            "name": "sum",
+            "span": {
+               "start": {
+                  "line": 3,
+                  "column": 13
                },
                "end": {
                   "line": 3,
-                  "column": 13
+                  "column": 16
+               }
+            }
+         },
+         "modifiers": [],
+         "params": [
+            {
+               "kind": "MethodParams",
+               "modifiers": [],
+               "identifier": {
+                  "kind": "LiteralIdentifier",
+                  "name": "a",
+                  "span": {
+                     "start": {
+                        "line": 3,
+                        "column": 22
+                     },
+                     "end": {
+                        "line": 3,
+                        "column": 23
+                     }
+                  }
+               },
+               "type": {
+                  "kind": "Base",
+                  "name": "int",
+                  "span": {
+                     "start": {
+                        "line": 3,
+                        "column": 18
+                     },
+                     "end": {
+                        "line": 3,
+                        "column": 21
+                     }
+                  }
+               },
+               "span": {
+                  "start": {
+                     "line": 3,
+                     "column": 18
+                  },
+                  "end": {
+                     "line": 3,
+                     "column": 23
+                  }
+               }
+            },
+            {
+               "kind": "MethodParams",
+               "modifiers": [],
+               "identifier": {
+                  "kind": "LiteralIdentifier",
+                  "name": "b",
+                  "span": {
+                     "start": {
+                        "line": 3,
+                        "column": 29
+                     },
+                     "end": {
+                        "line": 3,
+                        "column": 30
+                     }
+                  }
+               },
+               "type": {
+                  "kind": "Base",
+                  "name": "int",
+                  "span": {
+                     "start": {
+                        "line": 3,
+                        "column": 25
+                     },
+                     "end": {
+                        "line": 3,
+                        "column": 28
+                     }
+                  }
+               },
+               "span": {
+                  "start": {
+                     "line": 3,
+                     "column": 25
+                  },
+                  "end": {
+                     "line": 3,
+                     "column": 30
+                  }
+               }
+            }
+         ],
+         "metExplicit": true,
+         "returnType": {
+            "kind": "MethodReturn",
+            "type": {
+               "kind": "Base",
+               "name": "int",
+               "span": {
+                  "start": {
+                     "line": 3,
+                     "column": 9
+                  },
+                  "end": {
+                     "line": 3,
+                     "column": 12
+                  }
+               }
+            }
+         },
+         "span": {
+            "start": {
+               "line": 3,
+               "column": 9
+            },
+            "end": {
+               "line": 7,
+               "column": 6
+            }
+         }
+      },
+      {
+         "kind": "ExpressionStatement",
+         "expression": {
+            "kind": "CallExpression",
+            "callee": {
+               "kind": "LiteralIdentifier",
+               "name": "sum",
+               "span": {
+                  "start": {
+                     "line": 10,
+                     "column": 5
+                  },
+                  "end": {
+                     "line": 10,
+                     "column": 8
+                  }
+               }
+            },
+            "args": [
+               {
+                  "kind": "LiteralNumber",
+                  "value": 10,
+                  "span": {
+                     "start": {
+                        "line": 10,
+                        "column": 10
+                     },
+                     "end": {
+                        "line": 10,
+                        "column": 12
+                     }
+                  }
+               },
+               {
+                  "kind": "LiteralNumber",
+                  "value": 10,
+                  "span": {
+                     "start": {
+                        "line": 10,
+                        "column": 14
+                     },
+                     "end": {
+                        "line": 10,
+                        "column": 16
+                     }
+                  }
+               }
+            ],
+            "span": {
+               "start": {
+                  "line": 10,
+                  "column": 10
+               },
+               "end": {
+                  "line": 10,
+                  "column": 18
                }
             }
          }
