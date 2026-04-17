@@ -49,15 +49,13 @@ x.a;
 
 let code = `
     
-    model Player {
-        int life
-    };
+    met void sum() {
+    
+        ret void; 
+    
+    }
 
-    Player p = {
-        life: 100
-    };
-
-    int a = p.life;
+    void a = sum();
 
 `
 

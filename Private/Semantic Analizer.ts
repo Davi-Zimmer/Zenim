@@ -1,8 +1,9 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps } from "./Types/AST.js"
-import { Flow, SemanticType, ModelSymbol } from "./Types/Semantic.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier } from "./Types/AST.js"
+import { Flow, SemanticType, ModelSymbol, MethodSymbol } from "./Types/Semantic.js"
 
-type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model' | 'object' | 'alias'
+type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model' | 'object' | 'alias' | 'method'
+// adicionar met aqui
 
 class SemanticAnalizer {
 
@@ -116,7 +117,7 @@ class SemanticAnalizer {
 
     }
 
-    private resolveType( node: TypeAST ): SemanticType { /////////////////// coisar o model aq
+    private resolveType( node: TypeAST ): SemanticType { /////////////////// coisar o model aq 
 
         switch( node.kind ){
             
@@ -150,6 +151,7 @@ class SemanticAnalizer {
                 const alias = this.scopeStack.scope.resolveAlias( node.name )
                 
                 if( alias )  {
+
                     return {
                         base: 'alias',
                         nullable: false,
@@ -157,6 +159,22 @@ class SemanticAnalizer {
                         type: 'data',
                         alias
                     }
+
+                }
+
+                const method = this.scopeStack.scope.resolveMethod( node.name )
+
+                if( method ) {
+
+                    return {
+
+                        base: 'method',
+                        nullable: false,
+                        type: 'data',
+                        span: node.span,
+                        method,
+                    }
+
 
                 }
 
@@ -453,6 +471,81 @@ class SemanticAnalizer {
         */
     }
 
+    private analyzeExpressionStatement( node: ExpressionStatement ): SemanticType {
+
+        console.log( node.expression )
+
+        return this.analyzeExpression( node.expression, this.scopeStack.scope )
+
+    }
+
+    private analyzeCallExpression( node: CallExpression ): SemanticType {
+        
+        const ident = node.callee as LiteralIdentifier 
+        
+        const method = this.scopeStack.scope.resolveMethod( ident.name )
+
+        if( !method ) {
+
+            throw new Error(`Method '${ ident.name }' does not exist ${ this.errorLocation( ident.span ) }`)
+
+        }
+
+        for( let i = 0; i < method.params.length; i++ ){
+            
+            const param = method.params[ i ]
+            const arg   = node.args[ i ] 
+
+            if( !arg ) {
+
+                const lastArg = node.args[ node.args.length - 1 ] 
+
+                throw new Error(`Missing type '${ param.kind }' in method arguments ${ this.errorLocation( lastArg.span ) }`)
+
+            }
+
+            const semanticParam = this.resolveType( param )
+
+            const semanticArg = this.analyzeExpression( arg, this.scopeStack.scope )
+
+            if( !this.isAssignable( semanticParam, semanticArg ) ){
+
+                throw new Error(`Argument type '${ semanticArg.base }' is not assignable with parameter type '${ semanticParam.base }' ${ this.errorLocation( arg.span ) }`)
+
+            }
+
+
+        }
+
+        for( let i = 0; i < node.args.length; i++ ){
+            
+            const param = method.params[ i ]
+
+            if( !param ){
+
+                const lastParam = method.params[ method.params.length - 1 ] 
+
+                throw new Error(`Too many parameters ${ this.errorLocation( lastParam.span ) }`)
+
+            }
+
+        }
+
+        return this.resolveType( method.returns )
+
+    }
+
+    private resolveMethod( method: MethodSymbol, span: Span ): SemanticType {
+
+        return {
+            base: 'method',
+            method,
+            nullable: false,
+            span,
+            type: "data"
+        }
+
+    }
 
     private analyzeExpression( node: Expr , scope: Scope ): SemanticType {
 
@@ -518,7 +611,7 @@ class SemanticAnalizer {
                 if( symbolVar ) return this.resolveType( symbolVar.kind )
 
                 const symbolMethod = this.scopeStack.scope.resolveMethod( n.name )
-                if( symbolMethod ) return this.resolveType( symbolMethod.returns )
+                if( symbolMethod ) return this.resolveMethod( symbolMethod, node.span )
 
                 const symbolModel = this.scopeStack.scope.resolveModel( n.name )
                 if( symbolModel ) return {
@@ -534,8 +627,12 @@ class SemanticAnalizer {
     
             }
 
+            case AstKind.CallExpression: return this.analyzeCallExpression( node as CallExpression )
+
             case AstKind.LiteralModel: return this.analyzeLiteralModel( node as LiteralModel )
             // case AstKind.MemberAccess : return this.analyzeMemberAccess( node as MemberAccess )
+
+            case AstKind.ExpressionStatement: return this.analyzeExpressionStatement( node as ExpressionStatement )
 
             default: return {
                 base: null,
@@ -1426,7 +1523,12 @@ class SemanticAnalizer {
 
     private expressionStatement( node: ExpressionStatement ){
         
-        return this.analyzeExpression( node.expression, this.scopeStack.scope )
+        const a = this.analyzeExpression( node.expression, this.scopeStack.scope )
+
+        console.log( node )
+        console.log( a )
+        
+        return a 
 
     }
 

@@ -63,7 +63,6 @@ export class Scope {
 
     }
 
-
     public resolveAll( identifier: string ){
 
         return (

@@ -17,7 +17,6 @@
 #### To Finish
 - pointer / references
 - float / double
-- call Methods
 - once
 
 
@@ -52,6 +51,7 @@
 - alias (type)
 - model declaration
 - a.b.c.a
+- call Methods
 
 
 
