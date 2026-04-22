@@ -44,19 +44,34 @@ model x {
 
 x.a;
 */
+/*
+    int x = 0;
+    int* p = &x;
+    int* q = &(*p);
 
+
+    int p = 0;
+    *p = 10;
+
+    int a = 0;
+    int b = 1;
+
+    b = a;
+*/
+/*
+    10 = x;
+    (x + 1) = 5;
+*/
 
 
 let code = `
-    
-    met void sum() {
-    
-        ret void; 
-    
-    }
 
-    void a = sum();
+    int x = 0;
+    int* p = &x;
+    int* q = &(*p);
 
+    10 = x;     // erro
+    (x + 1) = 5; // erro
 `
 
 

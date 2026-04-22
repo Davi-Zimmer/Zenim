@@ -41,7 +41,10 @@ export enum AstKind {
     AliasItem             = "AliasItem",
     CallExpression        = "CallExpression",
     ObjectProps           = "ObjectProps",
-    
+    AssignableExpression  = "AssignableExpression",
+    // Dereference           = "Dereference",
+    // Reference             = "Reference",
+
 
     MemberAccess        = "MemberAccess",
     VariableDeclaration = "VariableDeclaration",
@@ -291,7 +294,7 @@ export type TypeAST =
   | { span: Span, kind: "Array", size: number, inner: TypeAST }
   | { span: Span, kind: "Nullable", inner: TypeAST }
   | { span: Span, kind: "Model", model: ModelSymbol }
-  
+  | { span: Span, kind: "Reference", refName: string }
 
 export interface TypedBinding {
     identifier : string

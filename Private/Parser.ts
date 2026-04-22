@@ -1,4 +1,4 @@
-import { convertToObject, textChangeRangeIsUnchanged } from "typescript"
+import { convertToObject, convertTypeAcquisitionFromJson, idText, textChangeRangeIsUnchanged } from "typescript"
 import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
@@ -126,8 +126,6 @@ class Parser {
         const expr = this.expression()
 
         this.consume( TKind.Semicolon )
-
-        this.advance()
 
         return {
             kind: AstKind.ExpressionStatement,
@@ -311,7 +309,7 @@ class Parser {
         
         let type = this.parseArrayType()
 
-        while( true ) {
+        while( !this.isAtEnd() ) {
 
             if( this.match( TKind.Question ) ) {
                 type = {
@@ -324,6 +322,7 @@ class Parser {
             }
 
             if( this.match( TKind.Star ) ) {
+
                 type = {
                     kind: "Pointer",
                     inner: type,
@@ -332,6 +331,7 @@ class Parser {
                 }
                 continue
             }
+
 
             if( this.match( TKind.Circumflex ) ) {
                 type = {
@@ -445,7 +445,7 @@ class Parser {
 
     }
 
-    private parseListInitialization(): LiteralList{
+    private parseListInitialization(): LiteralList {
 
         const array: Expr[] = []
 
@@ -535,14 +535,18 @@ class Parser {
     private parseInitializer(){
 
         let initializer: undefined | Expr
-
+   
         if( this.match( TKind.Equals ) ){
 
             if( this.match( TKind.LeftBracket ) ) initializer = this.parseListInitialization()
-
+            else
             if( this.match( TKind.LeftBrace ) ) initializer = this.parseLiteralModel()
 
-            else initializer = this.expression()
+            else {
+
+                initializer = this.expression()
+
+            }
 
         }
 
@@ -890,6 +894,7 @@ class Parser {
 
             _else = this.statement()
 
+            this.consume( TKind.Semicolon )
         }
 
         // this.consume( TKind.Semicolon )
@@ -1076,6 +1081,8 @@ class Parser {
 
     private expression(){
 
+        if( this.isAtEnd() ) throw new Error(`EOF in Expression`)
+
         return this.range()
 
     }
@@ -1117,9 +1124,10 @@ class Parser {
                 operator: operator.kind,
                 right,
                 span: this.spanRange( expr.span.start, right.span.end )
+                
             } as BinaryExpression
 
-        }
+        }      
 
         return expr
 
@@ -1135,8 +1143,9 @@ class Parser {
     private logicalOr() {
 
         let expr = this.logicalAnd()
-
+    
         if( this.match( TKind.OrOr ) ){
+
             const operator = this.previus()
 
             const right = this.logicalAnd()
@@ -1183,7 +1192,7 @@ class Parser {
 
         let expr = this.comparison()
 
-        if( this.match( TKind.Equals, TKind.NotEquals ) ){
+        if( this.match( TKind.EqualsEquals, TKind.NotEquals ) ){
 
             const operator = this.previus()
 
@@ -1278,12 +1287,10 @@ class Parser {
     }
 
     private exponent(){
-
+       
         let expr = this.unary()
         
-        if( this.match( TKind.StarStar ) ) {
-
-            const operator = this.previus()
+        if( this.match( TKind.Star ) && this.check( TKind.Star ) ) {
 
             const right = this.exponent()
 
@@ -1291,7 +1298,7 @@ class Parser {
                 kind: AstKind.BinaryExpression,
                 right,
                 left: expr,
-                operator: operator.kind,
+                operator: '**',
                 span: this.spanRange( expr.span.start, right.span.end )
 
             } as BinaryExpression
@@ -1304,7 +1311,7 @@ class Parser {
 
     private unary(): Expr {
 
-        if( this.match( TKind.Exclamation, TKind.Minus ) ){
+        if( this.match( TKind.Exclamation, TKind.Minus, TKind.Star, TKind.Circumflex, TKind.And ) ){
 
             const operator = this.previus()
             
@@ -1366,6 +1373,8 @@ class Parser {
 
         if( !t ) throw new Error(`Unexpected end ${ this.errorLocation() }`)
 
+        if( this.match( TKind.LeftParen ) )     return this.primaryParen()
+
         if( this.match( TKind.NumberLiteral ) ) return this.primaryNumberLiteral()
 
         if( this.match( TKind.StringLiteral ) ) return this.primaryStringLiteral()
@@ -1381,7 +1390,6 @@ class Parser {
         if( this.match( TKind.Identifier ) ) return this.primaryIdentifier()
 
         if( this.match( TKind.LeftBrace ) ) return this.primaryLiteralModel()
-
 
         throw new Error(`Expected Expression but it came "${ this.peek().kind }" ${this.errorLocation()}`)
         
@@ -1491,10 +1499,18 @@ class Parser {
 
     private primaryLiteralModel(){
 
-        const a = this.previus()
-
         return this.parseLiteralModel()
 
+    }
+
+    private primaryParen() {
+
+        const expr = this.expression()
+
+        this.consume( TKind.RightParen )
+
+        return expr
+        
     }
 
 }

@@ -167,3 +167,12 @@ Player p = {
 };
 
 int a = p.life;
+
+
+met void sum() {
+
+    ret void; 
+
+}
+
+void a = sum();
