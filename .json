@@ -2,263 +2,63 @@
    "kind": "Program",
    "body": [
       {
-         "kind": "MethodDeclaration",
-         "body": {
-            "kind": "BlockStatement",
-            "body": [
-               {
-                  "kind": "__ReturnStatement",  
-                  "expr": {
-                     "kind": "BinaryExpression",
-                     "left": {
-                        "kind": "LiteralIdentifier",
-                        "name": "a",
-                        "span": {
-                           "start": {
-                              "line": 5,
-                              "column": 13
-                           },
-                           "end": {
-                              "line": 5,
-                              "column": 14
-                           }
-                        }
-                     },
-                     "operator": "+",
-                     "right": {
-                        "kind": "LiteralIdentifier",
-                        "name": "b",
-                        "span": {
-                           "start": {
-                              "line": 5,
-                              "column": 17
-                           },
-                           "end": {
-                              "line": 5,
-                              "column": 18
-                           }
-                        }
-                     },
-                     "span": {
-                        "start": {
-                           "line": 5,
-                           "column": 13
-                        },
-                        "end": {
-                           "line": 5,
-                           "column": 18
-                        }
-                     }
-                  },
-                  "span": {
-                     "start": {
-                        "line": 5,
-                        "column": 9
-                     },
-                     "end": {
-                        "line": 5,
-                        "column": 19
-                     }
-                  }
-               }
-            ],
+         "kind": "ExpressionStatement",
+         "expression": {
+            "kind": "LiteralNumber",
+            "value": 10,
             "span": {
                "start": {
                   "line": 3,
-                  "column": 33
-               },
-               "end": {
-                  "line": 7,
-                  "column": 6
-               }
-            }
-         },
-         "identifier": {
-            "kind": "LiteralIdentifier",
-            "name": "sum",
-            "span": {
-               "start": {
-                  "line": 3,
-                  "column": 13
+                  "column": 5
                },
                "end": {
                   "line": 3,
-                  "column": 16
+                  "column": 7
                }
-            }
-         },
-         "modifiers": [],
-         "params": [
-            {
-               "kind": "MethodParams",
-               "modifiers": [],
-               "identifier": {
-                  "kind": "LiteralIdentifier",
-                  "name": "a",
-                  "span": {
-                     "start": {
-                        "line": 3,
-                        "column": 22
-                     },
-                     "end": {
-                        "line": 3,
-                        "column": 23
-                     }
-                  }
-               },
-               "type": {
-                  "kind": "Base",
-                  "name": "int",
-                  "span": {
-                     "start": {
-                        "line": 3,
-                        "column": 18
-                     },
-                     "end": {
-                        "line": 3,
-                        "column": 21
-                     }
-                  }
-               },
-               "span": {
-                  "start": {
-                     "line": 3,
-                     "column": 18
-                  },
-                  "end": {
-                     "line": 3,
-                     "column": 23
-                  }
-               }
-            },
-            {
-               "kind": "MethodParams",
-               "modifiers": [],
-               "identifier": {
-                  "kind": "LiteralIdentifier",
-                  "name": "b",
-                  "span": {
-                     "start": {
-                        "line": 3,
-                        "column": 29
-                     },
-                     "end": {
-                        "line": 3,
-                        "column": 30
-                     }
-                  }
-               },
-               "type": {
-                  "kind": "Base",
-                  "name": "int",
-                  "span": {
-                     "start": {
-                        "line": 3,
-                        "column": 25
-                     },
-                     "end": {
-                        "line": 3,
-                        "column": 28
-                     }
-                  }
-               },
-               "span": {
-                  "start": {
-                     "line": 3,
-                     "column": 25
-                  },
-                  "end": {
-                     "line": 3,
-                     "column": 30
-                  }
-               }
-            }
-         ],
-         "metExplicit": true,
-         "returnType": {
-            "kind": "MethodReturn",
-            "type": {
-               "kind": "Base",
-               "name": "int",
-               "span": {
-                  "start": {
-                     "line": 3,
-                     "column": 9
-                  },
-                  "end": {
-                     "line": 3,
-                     "column": 12
-                  }
-               }
-            }
-         },
-         "span": {
-            "start": {
-               "line": 3,
-               "column": 9
-            },
-            "end": {
-               "line": 7,
-               "column": 6
             }
          }
       },
       {
          "kind": "ExpressionStatement",
          "expression": {
-            "kind": "CallExpression",
-            "callee": {
+            "kind": "BinaryExpression",
+            "left": {
                "kind": "LiteralIdentifier",
-               "name": "sum",
+               "name": "x",
                "span": {
                   "start": {
-                     "line": 10,
+                     "line": 4,
                      "column": 5
                   },
                   "end": {
-                     "line": 10,
-                     "column": 8
+                     "line": 4,
+                     "column": 6
                   }
                }
             },
-            "args": [
-               {
-                  "kind": "LiteralNumber",
-                  "value": 10,
-                  "span": {
-                     "start": {
-                        "line": 10,
-                        "column": 10
-                     },
-                     "end": {
-                        "line": 10,
-                        "column": 12
-                     }
-                  }
-               },
-               {
-                  "kind": "LiteralNumber",
-                  "value": 10,
-                  "span": {
-                     "start": {
-                        "line": 10,
-                        "column": 14
-                     },
-                     "end": {
-                        "line": 10,
-                        "column": 16
-                     }
+            "operator": "=",
+            "right": {
+               "kind": "LiteralNumber",
+               "value": 20,
+               "span": {
+                  "start": {
+                     "line": 4,
+                     "column": 9
+                  },
+                  "end": {
+                     "line": 4,
+                     "column": 11
                   }
                }
-            ],
+            },
             "span": {
                "start": {
-                  "line": 10,
-                  "column": 10
+                  "line": 4,
+                  "column": 5
                },
                "end": {
-                  "line": 10,
-                  "column": 18
+                  "line": 4,
+                  "column": 11
                }
             }
          }

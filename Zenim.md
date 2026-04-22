@@ -11,11 +11,11 @@
 
 
 #### DO NOW
+- pointer / references
 
 
 
 #### To Finish
-- pointer / references
 - float / double
 - once
 

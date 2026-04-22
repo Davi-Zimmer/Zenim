@@ -2,8 +2,25 @@ import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
 import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier } from "./Types/AST.js"
 import { Flow, SemanticType, ModelSymbol, MethodSymbol } from "./Types/Semantic.js"
 
-type baseType = 'str' | 'bool' | 'char' | 'void' | 'null' | 'int' | 'flt' | 'dbl' | 'list' | 'any' | 'model' | 'object' | 'alias' | 'method'
-// adicionar met aqui
+type baseType = 
+    | 'str'
+    | 'bool'
+    | 'char'
+    | 'void'
+    | 'null'
+    | 'int'
+    | 'flt'
+    | 'dbl'
+    | 'list'
+    | 'any'
+    | 'model'
+    | 'object'
+    | 'alias'
+    | 'method'
+    | 'ptr'
+    | 'uniqPtr'
+
+
 
 class SemanticAnalizer {
 
@@ -76,6 +93,19 @@ class SemanticAnalizer {
 
     // ------------------------------------------ Helpers ------------------------------------------ \\
 
+
+    private typeToString( t: SemanticType ): string {
+
+        if( t.base === 'ptr' ) {
+
+            return `${ this.typeToString( t.to ) }*`
+
+        }
+
+        return t.base!
+
+    }
+
     private isPrimitive( s: string ) {
 
         return (
@@ -91,6 +121,20 @@ class SemanticAnalizer {
             s == 'any'
         )
     }
+
+    private isLlValue( sType: BinaryExpression ) {
+        
+        switch( sType.left.kind ){
+
+            case AstKind.LiteralIdentifier : return true
+            case AstKind.MemberAccess      : return true
+            case AstKind.UnaryExpression   : return sType.operator === '*'
+        
+        }
+
+        return false
+    }
+    
 
     private modifiersAllowedIn: Record< string, Set< string > > = {
         Global : new Set([ 'Mut', 'Once' ]),
@@ -195,6 +239,22 @@ class SemanticAnalizer {
 
             }
 
+            case 'Pointer': return {
+                base: 'ptr',
+                nullable: false,
+                span: node.span,
+                type: 'data',
+                to: this.resolveType( node.inner )
+            }
+
+            case 'UniquePointer': return {
+                base: 'uniqPtr',
+                nullable: false,
+                span: node.span,
+                type: 'data',
+                to: this.resolveType( node.inner )
+            }
+
             case 'Array': return {
                 base: 'list',
                 nullable: false,
@@ -220,25 +280,30 @@ class SemanticAnalizer {
     private typeExist( type: string | null ){
 
         return (
-            type !== null    &&
-            type === 'int'   ||
-            type === 'flt'   ||
-            type === 'str'   ||
-            type === 'dbl'   ||
-            type === 'char'  ||
-            type === 'bool'  ||
-            type === 'void'  ||
-            type === 'null'  ||
-            type === 'list'  ||
-            type === 'model' ||
-            type === 'alias'
-            // !( !this.scopeStack.scope.resolveModel( type! ) ) ||
-            // !( !this.scopeStack.scope.resolveAlias( type! ) )
+            type !== null  && (
+                
+                type === 'int'     ||
+                type === 'flt'     ||
+                type === 'str'     ||
+                type === 'dbl'     ||
+                type === 'char'    ||
+                type === 'bool'    ||
+                type === 'void'    ||
+                type === 'null'    ||
+                type === 'list'    ||
+                type === 'model'   ||
+                type === 'alias'   ||
+                type === 'ptr'     ||
+                type === 'uniqPtr'
+            )
         )
 
     }
 
-    private resolveMath( left: SemanticType, right: SemanticType ): SemanticType {
+    private resolveMath( node: BinaryExpression, scope: Scope ): SemanticType {
+
+        const left  = this.analyzeExpression( node.left, scope )
+        const right = this.analyzeExpression( node.right, scope )
 
         if( left.base === "int" && right.base === "int" ) {
 
@@ -255,11 +320,15 @@ class SemanticAnalizer {
 
     }
 
-    private resolveComparison( left: SemanticType, right: SemanticType ): SemanticType {
+    private resolveComparison( node: BinaryExpression, scope: Scope ): SemanticType {
+
+        const left  = this.analyzeExpression( node.left, scope )
+        const right = this.analyzeExpression( node.right, scope )
 
         const a =  {
             base: "bool",
             nullable: false,
+            type: 'data',
             span: this.spanRange( left.span, right.span )
         } as SemanticType
 
@@ -276,17 +345,41 @@ class SemanticAnalizer {
 
     }
 
-    private anayizeBinary( node: BinaryExpression, scope: Scope ){
+    private resolveAssignment( node: BinaryExpression, scope: Scope ): SemanticType {
 
         const left  = this.analyzeExpression( node.left, scope )
+        
+        if( !this.isLlValue( node ) ){
+            
+            throw new Error(`Invalid assignment target ${ this.errorLocation( node.left.span ) }`)
+            
+        }
+        
         const right = this.analyzeExpression( node.right, scope )
 
+        const isCompatible = this.isAssignable( left, right )
+
+        if( !isCompatible  ) throw new Error(`Type '${ this.typeToString( left ) }' is not compatible with '${ this.typeToString( right ) }' ${this.errorLocation( right.span )}`)
+
+        return {
+            base:'void',
+            nullable: false,
+            type: 'data',
+            span: this.spanRange( left.span, right.span )
+        }
+
+    }
+
+    private analyzeBinary( node: BinaryExpression, scope: Scope ){
+        
+
         switch( node.operator ){
-            case '+': return this.resolvePlus( left, right )
+            case '=': return this.resolveAssignment( node, scope )
+            case '+': return this.resolvePlus( node, scope  )
             case '-': 
             case '*': 
             case '**': 
-            case '/': return this.resolveMath( left, right )
+            case '/': return this.resolveMath( node, scope )
             case "==":
             case "!=":
             case "<":
@@ -294,10 +387,11 @@ class SemanticAnalizer {
             case "<=":
             case ">=": 
             case "||": 
-            case "&&": return this.resolveComparison( left, right )
+            case "&&": return this.resolveComparison( node, scope )
 
             default: {
-                throw new Error(`Operator '${ node.operator }' not supported for ${left.base} and ${right.base} ${ this.errorLocation( this.spanRange( left.span, right.span ) ) }`)
+    
+                throw new Error(`Operator '${ node.operator }' not supported for ${ node.left.kind } and ${ node.right.kind } ${ this.errorLocation( this.spanRange( node.left.span, node.right.span ) ) }`)
             }
 
         }
@@ -316,7 +410,10 @@ class SemanticAnalizer {
 
     }
 
-    private resolvePlus( left: SemanticType, right: SemanticType ): SemanticType {
+    private resolvePlus( node: BinaryExpression, scope: Scope ): SemanticType {
+
+        const left  = this.analyzeExpression( node.left, scope )
+        const right = this.analyzeExpression( node.right, scope )
 
         const span = this.spanRange( left.span, right.span )
 
@@ -547,6 +644,55 @@ class SemanticAnalizer {
 
     }
 
+    private analyzeUnary( node: Unary, scope: Scope ): SemanticType {
+
+        switch( node.operator ){
+
+            case '-':
+            case '!': return this.analyzeExpression( node.right, scope  )
+            
+            case '*': {
+
+                const a = this.analyzeExpression( node.right, scope )
+                
+                if( a.base !== 'ptr' ){
+
+                    return {
+                        base    : 'ptr',
+                        nullable: false,
+                        span    : node.span,
+                        type    : 'data',
+                        to      : this.analyzeExpression( node.right, scope )
+
+                    }
+
+                }
+
+                return a.to
+            }
+
+            case '^':  return {
+                base    : 'uniqPtr',
+                nullable: false,
+                span    : node.span,
+                type    : 'data',
+                to      : this.analyzeExpression( node.right, scope )
+            }
+
+            case '&':  return {
+                base    : 'ptr',
+                nullable: false,
+                span    : node.span,
+                type    : 'data',
+                to      : this.analyzeExpression( node.right, scope )
+            }
+
+        }
+
+        throw new Error(`unknown operator: '${ node.operator }' ${ this.errorLocation( node.span ) }`)
+
+    }
+
     private analyzeExpression( node: Expr , scope: Scope ): SemanticType {
 
         switch( node.kind ) {
@@ -599,9 +745,12 @@ class SemanticAnalizer {
 
             case AstKind.LiteralList: return this.analyzeList( node as LiteralList, scope )
 
-            case AstKind.BinaryExpression: return this.anayizeBinary( ( node as BinaryExpression ), scope )
+            case AstKind.BinaryExpression: return this.analyzeBinary( ( node as BinaryExpression ), scope )
 
-            case AstKind.UnaryExpression: return this.analyzeExpression( ( node as Unary ).right, scope )
+            // case AstKind.UnaryExpression: return this.analyzeExpression( ( node as Unary ).right, scope )
+
+            case AstKind.UnaryExpression: return this.analyzeUnary( node as Unary, scope )
+
 
             case AstKind.LiteralIdentifier: {
 
@@ -767,6 +916,12 @@ class SemanticAnalizer {
                 
         if( a.base === 'model' && b.base === 'model' ) return this.resolveAssignableModel( a, b )
 
+        if( a.base === 'ptr' && b.base === 'ptr' ) return this.isAssignable( a.to, b.to )
+
+        if( a.base === 'ptr' && b.base === 'null' ) return true
+
+        if( a.base === 'null' && b.base === 'ptr' ) return true 
+
         return a.base === b.base 
 
     }
@@ -924,7 +1079,7 @@ class SemanticAnalizer {
 
             const isCompatible = this.isAssignable( type, initializer )
 
-            if( !isCompatible  ) throw new Error(`Type '${type.base}' is not compatible with '${initializer.base}' ${this.errorLocation( node.span )}`)
+            if( !isCompatible  ) throw new Error(`Type '${ this.typeToString( type ) }' is not compatible with '${ this.typeToString( initializer ) }' ${this.errorLocation( node.span )}`)
 
             if( initializer.base === 'list' && type.base === 'list' ){
 
@@ -1523,12 +1678,13 @@ class SemanticAnalizer {
 
     private expressionStatement( node: ExpressionStatement ){
         
-        const a = this.analyzeExpression( node.expression, this.scopeStack.scope )
+        return this.analyzeExpression( node.expression, this.scopeStack.scope )
 
-        console.log( node )
-        console.log( a )
+    }
+
+    private binaryExpression( node: BinaryExpression ){
         
-        return a 
+        return this.analyzeExpression( node, this.scopeStack.scope )
 
     }
 

@@ -20,15 +20,14 @@ export enum TKind {
     Percent     = "%",
     Exclamation = "!",
     Question    = "?",
-    StarStar    = "**",
     Equals      = "=",
 
     
     // Delimiters
     LeftParen    = "(",
     RightParen   = ")",
-    RightBracket = "[",
-    LeftBracket  = "]",
+    RightBracket = "]",
+    LeftBracket  = "[",
     LeftBrace    = "{",
     RightBrace   = "}",
     Semicolon    = ";",
@@ -57,6 +56,7 @@ export enum TKind {
     Grave         = "`",
     RightArrow    = "->",
     LeftArrow     = "<-",
+    Test          = "@",
 
 
     // Modifiers
