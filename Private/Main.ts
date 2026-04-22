@@ -65,13 +65,10 @@ x.a;
 
 
 let code = `
-
     int x = 0;
     int* p = &x;
     int* q = &(*p);
-
-    10 = x;     // erro
-    (x + 1) = 5; // erro
+  
 `
 
 

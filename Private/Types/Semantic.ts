@@ -12,18 +12,21 @@ export type SemanticType =
     | { base: 'any'     | null, nullable: boolean, span: Span, type: 'data' }
     | { base: 'model'   | null, nullable: boolean, span: Span, model: ModelSymbol, type: 'data' }
     | { base: 'alias'   | null, nullable: boolean, span: Span, alias: AliasSymbol, type: 'data' }
-    | { base: 'list'    | null, nullable: boolean, span: Span, inner: SemanticType, size: number, type: 'data' }
-    | { base: 'object'  | null, nullable: boolean, span: Span, type: 'data', props: Map< string, SemanticType > }
+    | { base: 'list'    | null, nullable: boolean, span: Span, inner: SemanticResult, size: number, type: 'data' }
+    | { base: 'object'  | null, nullable: boolean, span: Span, type: 'data', props: Map< string, SemanticResult > }
     | { base: 'method'  | null, nullable: boolean, span: Span, type: 'data', method: MethodSymbol }
-    | { base: 'ptr'     | null, nullable: boolean, span: Span, type: 'data', to: SemanticType }
-    | { base: 'uniqPtr' | null, nullable: boolean, span: Span, type: 'data', to: SemanticType }
+    | { base: 'ptr'     | null, nullable: boolean, span: Span, type: 'data', to: SemanticResult }
+    | { base: 'uniqPtr' | null, nullable: boolean, span: Span, type: 'data', to: SemanticResult }
 
-
+export type SemanticResult = {
+    type: SemanticType
+    valueKind: 'lvalue' | 'rvalue'
+}
 
 export type FieldInfo = {
     identifier   : LiteralIdentifier
     type         : TypeAST
-    defaultValue : SemanticType
+    defaultValue : SemanticResult
 }
 
 export interface SymbolInfo {
@@ -53,6 +56,6 @@ export type AliasSymbol = {
 
 export type Flow = {
     type          : 'flow'
-    returnsType   : SemanticType | null
+    returnsType   : SemanticResult | null
     alwaysReturns : boolean
 }

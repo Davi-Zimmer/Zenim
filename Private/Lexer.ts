@@ -280,7 +280,6 @@ export class Lexer {
                 if( this.isDigit( c ) ) this.number(); else 
                 if( this.isAlpha( c ) ) this.identifier(); else
                 {
-                 
                     throw new Error(`Unknown char '${c}' at line ${this.line}, column ${this.column}`)
                 }
 
