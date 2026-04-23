@@ -11,7 +11,6 @@
 
 
 #### DO NOW
-- pointer / references
 
 
 
@@ -52,6 +51,7 @@
 - model declaration
 - a.b.c.a
 - call Methods
+- pointer / references
 
 
 
