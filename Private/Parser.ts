@@ -1,5 +1,5 @@
 import { convertToObject, convertTypeAcquisitionFromJson, idText, textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel, OwnExpression } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -1354,6 +1354,7 @@ class Parser {
                     member: ident.name,
                     object: expr,
                     span: this.spanRange( expr.span.start, ident.span.end )
+                    
                 } as MemberAccess
             
                 continue
@@ -1390,6 +1391,8 @@ class Parser {
         if( this.match( TKind.Identifier ) ) return this.primaryIdentifier()
 
         if( this.match( TKind.LeftBrace ) ) return this.primaryLiteralModel()
+
+        if( this.match( TKind.Own ) ) return this.primaryOwn()
 
         throw new Error(`Expected Expression but it came "${ this.peek().kind }" ${this.errorLocation()}`)
         
@@ -1511,6 +1514,22 @@ class Parser {
 
         return expr
         
+    }
+
+    private primaryOwn() {
+
+        const span = this.getPreviousSpan()
+
+        const expr = this.expression()
+
+        return {
+
+            kind: AstKind.OwnExpression,
+            expr,
+            span
+
+        } as OwnExpression
+
     }
 
 }

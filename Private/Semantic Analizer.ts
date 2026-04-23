@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier } from "./Types/AST.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression } from "./Types/AST.js"
 import { Flow, SemanticType, ModelSymbol, MethodSymbol, SemanticResult } from "./Types/Semantic.js"
 
 type baseType = 
@@ -19,7 +19,7 @@ type baseType =
     | 'method'
     | 'ptr'
     | 'uniqPtr'
-
+    | 'uniqVal'
 
 
 class SemanticAnalizer {
@@ -98,6 +98,18 @@ class SemanticAnalizer {
 
         }
 
+        if( t.base === 'uniqPtr' ) {
+
+            return `${ this.typeToString( t.to.type ) }^`
+
+        }
+
+        if( t.base === 'uniqVal' ){
+
+            return `${ this.typeToString( t.value.type ) }^`
+
+        }
+
         return t.base!
 
     }
@@ -131,7 +143,6 @@ class SemanticAnalizer {
         return false
     }
     
-
     private modifiersAllowedIn: Record< string, Set< string > > = {
         Global : new Set([ 'Mut', 'Once' ]),
         Model  : new Set([ 'Mut', 'Once' ])
@@ -171,6 +182,7 @@ class SemanticAnalizer {
                             nullable: false,
                             span: node.span,
                             type: 'data',
+                            isUnique: false,
                         },
 
                         valueKind: 'lvalue'
@@ -188,6 +200,8 @@ class SemanticAnalizer {
                             nullable: false,
                             span: node.span,
                             type: 'data',
+                            isUnique: false,
+
                             model
                         },
                         valueKind: 'lvalue'
@@ -205,6 +219,7 @@ class SemanticAnalizer {
                             nullable: false,
                             span: node.span,
                             type: 'data',
+                            isUnique: false,
                             alias
                         },
                         valueKind: 'lvalue'
@@ -220,6 +235,7 @@ class SemanticAnalizer {
                         type: {
                             base: 'method',
                             nullable: false,
+                            isUnique: false,
                             type: 'data',
                             span: node.span,
                             method,
@@ -258,6 +274,7 @@ class SemanticAnalizer {
                     nullable: false,
                     span: node.span,
                     type: 'data',
+                    isUnique: false,
                     to: this.resolveType( node.inner )
                 },
                 valueKind: 'lvalue'
@@ -269,6 +286,8 @@ class SemanticAnalizer {
                     nullable: false,
                     span: node.span,
                     type: 'data',
+                    isUnique: true,
+
                     to: this.resolveType( node.inner )
                 },
                 valueKind: 'lvalue'
@@ -281,6 +300,8 @@ class SemanticAnalizer {
                     span: node.span,
                     inner: this.resolveType( node.inner ),
                     size: node.size,
+                    isUnique: false,
+
                     type: 'data' 
                 },
                 valueKind: 'lvalue'
@@ -292,6 +313,7 @@ class SemanticAnalizer {
                     base: null,
                     nullable: false,
                     span: node.span,
+                    isUnique: false,
                     type: 'data'
                 },
                 valueKind: 'lvalue'
@@ -335,10 +357,11 @@ class SemanticAnalizer {
                 type: {
                     base: "int",
                     nullable: false,
+                    isUnique: false,
                     type: 'data',
                     span: this.spanRange( left.span, right.span )
                 },
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
             }
 
 
@@ -357,6 +380,7 @@ class SemanticAnalizer {
             type: {
                 base: "bool",
                 nullable: false,
+                isUnique: false,
                 type: 'data',
                 span: this.spanRange( left.span, right.span )
             },
@@ -378,7 +402,8 @@ class SemanticAnalizer {
 
     private resolveAssignment( node: BinaryExpression, scope: Scope ): SemanticResult {
 
-        const left  = this.analyzeExpression( node.left, scope ).type
+        const left = this.analyzeExpression( node.left, scope )
+        const leftType = left.type
         
         if( !this.isLlValue( node ) ){
             
@@ -386,20 +411,24 @@ class SemanticAnalizer {
             
         }
         
-        const right = this.analyzeExpression( node.right, scope ).type
+        const right = this.analyzeExpression( node.right, scope )
+        const rightType = right.type
 
-        const isCompatible = this.isAssignable( left, right )
+        this.checkAssignmentErrors( left, right, node )
 
-        if( !isCompatible  ) throw new Error(`Type '${ this.typeToString( left ) }' is not compatible with '${ this.typeToString( right ) }' ${this.errorLocation( right.span )}`)
+        const isCompatible = this.isAssignable( leftType, rightType )
+
+        if( !isCompatible  ) throw new Error(`Type '${ this.typeToString( leftType ) }' is not compatible with '${ this.typeToString( rightType ) }' ${this.errorLocation( rightType.span )}`)
 
         return {
             type: {
                 base:'void',
+                isUnique: false,
                 nullable: false,
                 type: 'data',
-                span: this.spanRange( left.span, right.span )
+                span: this.spanRange( leftType.span, rightType.span )
             },
-            valueKind: 'lvalue'
+            valueKind: 'rvalue'
         }
 
     }
@@ -455,6 +484,7 @@ class SemanticAnalizer {
                 type: {
                     base: 'str',
                     nullable: false,
+                    isUnique: false,
                     span,
                     type: 'data' 
                 },
@@ -467,6 +497,7 @@ class SemanticAnalizer {
             return {
                 type: {
                 base: 'int',
+                    isUnique: false,
                     nullable: false,
                     span,
                     type: 'data' 
@@ -479,6 +510,7 @@ class SemanticAnalizer {
             return {
                 type: {
                     base: 'str',
+                    isUnique: false,
                     nullable: false,
                     span,
                     type: 'data' 
@@ -491,6 +523,7 @@ class SemanticAnalizer {
             return {
                 type: {
                     base: 'bool',
+                    isUnique: false,
                     nullable: false,
                     span,
                     type: 'data' 
@@ -550,12 +583,13 @@ class SemanticAnalizer {
         return {
             type: {
                 base: 'object',
+                isUnique: false,
                 nullable: false,
                 props,
                 type: "data",
                 span: node.span
             },
-            valueKind: 'lvalue'
+            valueKind: 'rvalue'
         }
 
     }
@@ -569,9 +603,10 @@ class SemanticAnalizer {
                 base: 'null',
                 nullable: false,
                 span: node.span,
+                isUnique: false,
                 type: 'data'
             },
-            valueKind: 'lvalue'
+            valueKind: 'rvalue'
         }
 
         return item
@@ -685,11 +720,13 @@ class SemanticAnalizer {
             type: {
                 base: 'method',
                 method,
+                isUnique: false,
                 nullable: false,
                 span,
                 type: "data"
             },
-            valueKind: 'lvalue'
+            valueKind: 'rvalue'
+
         }
 
     }
@@ -699,7 +736,7 @@ class SemanticAnalizer {
         switch( node.operator ){
 
             case '-':
-            case '!': return this.analyzeExpression( node.right, scope  )
+            case '!': return this.analyzeExpression( node.right, scope )
             
             case '*': {
 
@@ -709,13 +746,14 @@ class SemanticAnalizer {
 
                     return {
                         type: {
+                            isUnique: false,
                             base    : 'ptr',
                             nullable: false,
                             span    : node.span,
                             type    : 'data',
                             to      : this.analyzeExpression( node.right, scope )
                         },
-                        valueKind: 'lvalue'
+                        valueKind: 'rvalue'
                     }
 
                 }
@@ -727,28 +765,54 @@ class SemanticAnalizer {
             case '^':  return {
                 type: {
                     base    : 'uniqPtr',
+                    isUnique: true,
                     nullable: false,
                     span    : node.span,
                     type    : 'data',
                     to      : this.analyzeExpression( node.right, scope )
                 },
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
             }
 
             case '&':  return {
                 type: {
+                    isUnique: false,
                     base    : 'ptr',
                     nullable: false,
                     span    : node.span,
                     type    : 'data',
                     to      : this.analyzeExpression( node.right, scope )
                 },
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
             }
 
         }
 
         throw new Error(`unknown operator: '${ node.operator }' ${ this.errorLocation( node.span ) }`)
+
+    }
+
+    private analyzeOwnExpression( node: OwnExpression, scope: Scope ): SemanticResult {
+
+        const value = this.analyzeExpression( node.expr, scope )
+
+        if( value.type.base === 'uniqVal' ){
+
+            throw new Error(`'own' Has already been mentioned ${ this.errorLocation( node.expr.span ) }`)
+
+        }
+
+        return {
+            type: {
+                base: 'uniqVal',
+                isUnique: true,
+                nullable: false,
+                span: node.span,
+                type: 'data',
+                value
+            },
+            valueKind: 'rvalue'
+        }
 
     }
 
@@ -759,35 +823,38 @@ class SemanticAnalizer {
             case AstKind.LiteralString: return {
                 type: {
                     base: 'str',
+                    isUnique: false,
                     nullable: false,
                     span: node.span,
                     type: 'data' 
                 },
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
             }
 
             case AstKind.LiteralNumber: return { /////////////// trocar pra LiteralInt e adicionar float/double
                 type: {
 
                     base: 'int',                   
+                    isUnique: false,
                     nullable: false,
                     span: node.span,
                     type: 'data' 
                 },
 
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
 
             }
 
             case AstKind.LiteralBool: return {
                 type: {
                     base: 'bool',
+                    isUnique: false,
                     nullable: false,
                     span: node.span,
                     type: 'data' 
                 },
 
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
 
             }
            
@@ -795,36 +862,39 @@ class SemanticAnalizer {
                 type: {
 
                     base: 'char',
+                    isUnique: false,
                     nullable: false,
                     span: node.span,
                     type: 'data' 
                 },
 
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
 
             }
 
             case AstKind.LiteralNull: return {
                 type: {
                     base: 'null',
+                    isUnique: false,
                     nullable: true,
                     span: node.span,
                     type: 'data' 
                 },
 
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
 
             }
 
             case AstKind.LiteralVoid: return {
                 type: {
                     base: 'void',
+                    isUnique: false,
                     nullable: false,
                     span: node.span,
                     type: 'data' 
                 },
 
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
 
             }
 
@@ -856,6 +926,7 @@ class SemanticAnalizer {
                     type: {
                         base: 'model',
                         model: symbolModel,
+                        isUnique: false,
                         nullable: false,
                         span: node.span,
                         type: 'data'
@@ -875,9 +946,12 @@ class SemanticAnalizer {
 
             case AstKind.ExpressionStatement: return this.analyzeExpressionStatement( node as ExpressionStatement )
 
+            case AstKind.OwnExpression: return this.analyzeOwnExpression( node as OwnExpression, scope )
+
             default: return {
                 type: {
                     base: null,
+                    isUnique: false,
                     nullable: false,
                     span: node.span,
                     type: 'data' 
@@ -998,7 +1072,7 @@ class SemanticAnalizer {
     }
 
     private isAssignable( a: SemanticType, b: SemanticType ): boolean {
-        
+
         if( b.base === 'any' ) return true
         
         if( a.base === null ) return a.nullable
@@ -1015,6 +1089,10 @@ class SemanticAnalizer {
         if( a.base === 'ptr' && b.base === 'ptr' ) return this.isAssignable( a.to.type, b.to.type )
 
         if( a.base === 'ptr' && b.base === 'null' ) return true
+
+        // if( a.base === 'uniqPtr' && b.base === 'ptr' ) return true
+
+        if( a.base === 'uniqPtr' && b.base === 'uniqVal' ) return this.isAssignable( a.to.type, b.value.type )
 
         if( a.base === 'null' && b.base === 'ptr' ) return true 
 
@@ -1067,7 +1145,8 @@ class SemanticAnalizer {
                 nullable: false,
                 span: node.span,
                 size: 0,
-                type: 'data' 
+                type: 'data',
+                isUnique: false
             } as SemanticType
 
             return {
@@ -1075,14 +1154,15 @@ class SemanticAnalizer {
                     base: 'list',
                     nullable: false,
                     span: node.span,
+                    isUnique: false,
                     size: node.size,
                     type: 'data',
                     inner: {
                         type: a,
-                        valueKind: 'lvalue'
+                        valueKind: 'rvalue'
                     } 
                 },
-                valueKind: 'lvalue'
+                valueKind: 'rvalue'
 
             } 
 
@@ -1091,7 +1171,7 @@ class SemanticAnalizer {
 
         let currentType = this.analyzeExpression( node.list[ 0 ], scope ).type
 
-        for (let i = 1; i < node.list.length; i++) {
+        for( let i = 1; i < node.list.length; i++ ) {
 
             const nextType = this.analyzeExpression( node.list[ i ], scope ).type
 
@@ -1103,14 +1183,15 @@ class SemanticAnalizer {
                 base: 'list',
                 inner: {
                     type: currentType,
-                    valueKind: 'lvalue'
+                    valueKind: 'rvalue'
                 },
                 nullable: false,
+                isUnique: false,
                 span: node.span,
                 size: node.size,
                 type: 'data' 
             },
-            valueKind: 'lvalue'
+            valueKind: 'rvalue'
         }
 
     }
@@ -1175,11 +1256,59 @@ class SemanticAnalizer {
 
     }
 
-    private checkInitializer( node: VariableDeclaration | MethodParams | ModelFieldDeclaration, type: SemanticType ){
+    private checkAssignmentErrors( aSemanticResult: SemanticResult, bSemanticResult: SemanticResult, node: BinaryExpression | VariableDeclaration | MethodParams | ModelFieldDeclaration ){
+
+        const a = aSemanticResult.type
+        const b = bSemanticResult.type
+
+        if( a.isUnique ){
+
+            if( b.base === 'uniqPtr' || ( b.base === 'uniqVal' && b.value.type.base === 'uniqPtr' ) ){
+
+                throw new Error(`Cannot copy a unique value. Use 'move' ${ this.errorLocation( b.span ) }`)
+
+            }
+
+            if( bSemanticResult.valueKind === 'lvalue' || ( b.base === 'uniqVal' && b.value.valueKind === 'lvalue' )){
+
+                throw new Error(`Cannot make '${ this.typeToString( b ) }' unique because it refers to an existing value ${ this.errorLocation( b.span ) }`)
+
+            }
+
+            if( b.base === 'ptr' || ( b.base === 'uniqVal' && b.value.type.base === 'ptr' ) ) {
+
+                throw new Error(`Cannot create unique from existing reference ${ this.errorLocation( b.span ) }`)
+
+            }
+
+            if( !b.isUnique ){
+                
+                throw new Error(`Cannot assign non-unique value to unique pointer. Use 'own' ${ this.errorLocation( b.span ) }`)
+                
+            }
+
+        } else {
+
+            if( b.isUnique ){
+
+                throw new Error(`Cannot convert 'unique pointer' to 'raw pointer' ${ this.errorLocation( node.span ) }`)
+
+            }
+
+
+        }
+
+    }
+
+    private checkInitializer( node: VariableDeclaration | MethodParams | ModelFieldDeclaration, typeSemanticResult: SemanticResult ){
 
         if( node.initializer ){
+            const type = typeSemanticResult.type
 
-            const initializer = this.analyzeExpression( node.initializer, this.scopeStack.scope ).type
+            const initializer_ = this.analyzeExpression( node.initializer, this.scopeStack.scope )
+            const initializer = initializer_.type
+            
+            this.checkAssignmentErrors( typeSemanticResult, initializer_, node )
 
             const isCompatible = this.isAssignable( type, initializer )
 
@@ -1204,6 +1333,20 @@ class SemanticAnalizer {
 
         }
         
+    }
+
+    private checkType( ident: LiteralIdentifier ){
+        
+        const alias = this.scopeStack.scope.resolveAlias( ident.name )
+
+        if( alias ) return alias
+
+        const model = this.scopeStack.scope.resolveModel( ident.name )
+        
+        if( model ) return model
+
+        throw new Error(`Type '${ ident.name }' was never been declared ${ ident.span }`)
+
     }
 
     /*
@@ -1240,12 +1383,11 @@ class SemanticAnalizer {
 
         this.checkIdentifierExists( node )
 
-        const type = this.resolveType( node.type ).type
+        const type = this.resolveType( node.type )
 
+        this.checkTypeExist( node, type.type )
 
-        this.checkTypeExist( node, type )
-
-        if( !node.initializer && !type.nullable ){
+        if( !node.initializer && !type.type.nullable ){
             
             throw new Error(`It is not possible to declare variables without content unless they are nullable ${this.errorLocation( node.span )}`)
 
@@ -1623,9 +1765,9 @@ class SemanticAnalizer {
 
         this.checkIdentifierExists( node )
 
-        const type = this.resolveType( node.type ).type
+        const type = this.resolveType( node.type )
 
-        this.checkTypeExist( node, type )
+        this.checkTypeExist( node, type.type )
 
         this.checkInitializer( node, type )
 
@@ -1710,7 +1852,7 @@ class SemanticAnalizer {
 
         this.checkTypeExist( node, type.type )
 
-        this.checkInitializer( node, type.type )
+        this.checkInitializer( node, type )
 
         return {
             type: node.type,

@@ -65,10 +65,12 @@ x.a;
 
 
 let code = `
-    int x = 0;
-    int* p = &x;
-    int* q = &(*p);
-  
+
+    int^ x = own 1;
+
+    int* a = x;
+
+    
 `
 
 

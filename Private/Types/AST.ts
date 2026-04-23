@@ -42,6 +42,7 @@ export enum AstKind {
     CallExpression        = "CallExpression",
     ObjectProps           = "ObjectProps",
     AssignableExpression  = "AssignableExpression",
+    OwnExpression         = "OwnExpression",
     // Dereference           = "Dereference",
     // Reference             = "Reference",
 
@@ -225,6 +226,22 @@ export interface LiteralModel extends Expr {
 
 export type LiteralValue = LiteralBool | LiteralString | LiteralChar | LiteralNumber | LiteralVoid | LiteralNull | LiteralBool // | LiteralFloat | LiteralDouble
 
+/*
+    export type LiteralValue = 
+    | LiteralNumber
+    | LiteralString
+    | LiteralChar
+    | LiteralBool
+    | LiteralNull
+    | LiteralVoid
+    | LiteralIdentifier
+    | LiteralList
+    | LiteralModel
+    // | LiteralFloat | LiteralDouble
+
+
+*/
+
 
 // ----------------------------------- _Expressions_ ----------------------------------- \\
 
@@ -284,6 +301,12 @@ export interface ObjectProps extends Expr {
     item       : Expr
     identifier : LiteralIdentifier
     span       : Span
+}
+
+export interface OwnExpression extends Expr {
+    kind: AstKind.OwnExpression
+    span: Span
+    expr: Expr
 }
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
