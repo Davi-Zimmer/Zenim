@@ -1,5 +1,5 @@
-import { convertToObject, convertTypeAcquisitionFromJson, idText, textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel, OwnExpression } from "./Types/AST.js"
+import { convertToObject, convertTypeAcquisitionFromJson, idText, isTypeLiteralNode, textChangeRangeIsUnchanged } from "typescript"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel, OwnExpression, ListAccess } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -1360,6 +1360,22 @@ class Parser {
                 continue
             }
 
+            if( this.match( TKind.LeftBracket ) ){
+
+                const index = this.expression()
+
+                this.consume( TKind.RightBracket )
+
+                return {
+                    kind: AstKind.ListAccess,
+                    index,
+                    target: expr,
+                    span: this.spanRange( expr.span.start, this.getPreviousSpan().end )
+                    
+                } as ListAccess
+
+            }
+
             break
 
         }
@@ -1391,6 +1407,8 @@ class Parser {
         if( this.match( TKind.Identifier ) ) return this.primaryIdentifier()
 
         if( this.match( TKind.LeftBrace ) ) return this.primaryLiteralModel()
+
+        if( this.match( TKind.LeftBracket ) ) return this.primaryListLiteral()
 
         if( this.match( TKind.Own ) ) return this.primaryOwn()
 
@@ -1529,6 +1547,12 @@ class Parser {
             span
 
         } as OwnExpression
+
+    }
+
+    private primaryListLiteral() {
+
+        return this.parseListInitialization()
 
     }
 

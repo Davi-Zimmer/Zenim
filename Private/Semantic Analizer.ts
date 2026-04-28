@@ -1,5 +1,5 @@
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression } from "./Types/AST.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression, ListAccess } from "./Types/AST.js"
 import { Flow, SemanticType, ModelSymbol, MethodSymbol, SemanticResult } from "./Types/Semantic.js"
 
 type baseType = 
@@ -107,6 +107,12 @@ class SemanticAnalizer {
         if( t.base === 'uniqVal' ){
 
             return `${ this.typeToString( t.value.type ) }^`
+
+        }
+
+        if( t.base === 'list' ){
+
+            return `${ this.typeToString( t.inner.type ) }[]`
 
         }
 
@@ -828,6 +834,75 @@ class SemanticAnalizer {
 
     }
 
+    private analyzeIdentifier( node: LiteralIdentifier, scope: Scope ): SemanticResult {
+
+        const n = ( node as AstType ) 
+
+        const symbolVar = this.scopeStack.scope.resolveVar( n.name )
+        if( symbolVar ) return this.resolveType( symbolVar.kind )
+
+        const symbolMethod = this.scopeStack.scope.resolveMethod( n.name )
+        if( symbolMethod ) return this.resolveMethod( symbolMethod, node.span )
+
+        const symbolModel = this.scopeStack.scope.resolveModel( n.name )
+        if( symbolModel ) return {
+            type: {
+                base: 'model',
+                model: symbolModel,
+                isUnique: false,
+                nullable: false,
+                span: node.span,
+                type: 'data'
+            },
+            valueKind: 'lvalue'
+
+        }
+
+        const aliasSymbol = this.scopeStack.scope.resolveAlias( n.name )
+
+        if( aliasSymbol ) return this.resolveType( aliasSymbol.type )
+
+        throw new Error(`Identifier '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
+
+    }
+
+    private listAccess( node: ListAccess, scope: Scope ): SemanticResult {
+
+        const targ = this.analyzeExpression( node.target, scope )
+
+        if( targ.type.base !== 'list' && targ.type.base !== 'alias' ) {
+
+            throw new Error(`'${ targ.type.base } '  It's not a list ${ this.errorLocation( targ.type.span ) }`)
+
+        }
+
+        const index = this.analyzeExpression( node.index, scope )
+
+        if( index.type.base !== "int" ){
+
+            throw new Error(`List access must be a number ${ this.errorLocation( index.type.span ) }`)
+
+        }
+
+        if( targ.type.base === 'list' ){
+
+            return {
+                type: targ.type.inner.type,
+                valueKind: 'rvalue' // pode ser tanto r quanto l ( não sei como faz isso XD )
+            }
+
+        }
+
+        return {
+            type: targ.type,
+            valueKind: 'rvalue'
+        }
+
+        // if( targ.type.size > index.type ){}
+
+
+    }
+
     private analyzeExpression( node: Expr , scope: Scope ): SemanticResult {
 
         switch( node.kind ) {
@@ -923,33 +998,7 @@ class SemanticAnalizer {
             case AstKind.UnaryExpression: return this.analyzeUnary( node as Unary, scope )
 
 
-            case AstKind.LiteralIdentifier: {
-
-                const n = ( node as AstType ) 
-
-                const symbolVar = this.scopeStack.scope.resolveVar( n.name )
-                if( symbolVar ) return this.resolveType( symbolVar.kind )
-
-                const symbolMethod = this.scopeStack.scope.resolveMethod( n.name )
-                if( symbolMethod ) return this.resolveMethod( symbolMethod, node.span )
-
-                const symbolModel = this.scopeStack.scope.resolveModel( n.name )
-                if( symbolModel ) return {
-                    type: {
-                        base: 'model',
-                        model: symbolModel,
-                        isUnique: false,
-                        nullable: false,
-                        span: node.span,
-                        type: 'data'
-                    },
-                    valueKind: 'lvalue'
-
-                }
-
-                throw new Error(`Identifier '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
-    
-            }
+            case AstKind.LiteralIdentifier: return this.analyzeIdentifier( node as LiteralIdentifier, scope )
 
             case AstKind.CallExpression: return this.analyzeCallExpression( node as CallExpression )
 
@@ -960,15 +1009,24 @@ class SemanticAnalizer {
 
             case AstKind.OwnExpression: return this.analyzeOwnExpression( node as OwnExpression, scope )
 
-            default: return {
-                type: {
-                    base: null,
-                    isUnique: false,
-                    nullable: false,
-                    span: node.span,
-                    type: 'data' 
-                },
-                valueKind: 'lvalue'
+            case AstKind.ListAccess: return this.listAccess( node as ListAccess, scope )
+
+            default: {
+
+                console.warn(`Expression type '${ node.kind }' has no analysis`)
+
+                return {
+
+                    type: {
+                        base: null,
+                        isUnique: false,
+                        nullable: false,
+                        span: node.span,
+                        type: 'data' 
+                    },
+                    valueKind: 'lvalue'
+
+                }
 
             }
 
@@ -1000,6 +1058,14 @@ class SemanticAnalizer {
 
                         throw new Error(`Property '${ objPropType.base }' is not assignable with type '${ aType.name }' ${ this.errorLocation( objPropType.span ) }`)
                         
+                    }
+
+                    if( aType.kind === 'Array' ){
+
+                        const t = this.resolveType( aType )
+
+                        throw new Error(`Property '${ this.typeToString( objPropType ) }' is not assignable with type '${ this.typeToString( t.type ) }' ${ this.errorLocation( objPropType.span ) }`)
+
                     }
 
                     // throw new Error(`Literal object property named ${ key } is not assignable with type ${} ${ this.errorLocation( objPropType.span ) }`)

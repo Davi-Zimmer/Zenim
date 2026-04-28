@@ -59,14 +59,44 @@ x.a;
     b = a;
 */
 /*
-    10 = x;
-    (x + 1) = 5;
+   
+
 */
 
 
 let code = `
 
-    int^^ a = own 1;
+    met 5..int getList() {
+        
+        5..int list = [ 0, 1, 2, 3, 4 ];
+
+        list[ 0 ];
+
+        ret list;
+    }
+
+    getList()[ 1 ];
+
+    
+
+    alias x: ..int;
+    x numberList = [ 0, 1, 2 ];
+    numberList[ 0 ];
+
+
+
+
+    model Player {
+        str name, 
+        ..int items
+    };
+
+    Player p = {
+        name: "Player Irado",
+        items: [ 1 ]
+    };
+
+    p.items[ 0 ];
     
 `
 
