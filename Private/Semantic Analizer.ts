@@ -731,6 +731,30 @@ class SemanticAnalizer {
 
     }
 
+    private analyzeUniquePtr( node: Unary, scope: Scope ): SemanticResult {
+
+        const to = this.analyzeExpression( node.right, scope )
+
+        if( to ) {
+
+            throw new Error(`Cannot create double unique pointer ${ this.errorLocation( node.right.span ) }`)
+
+        }
+
+        return {
+            type: {
+                base    : 'uniqPtr',
+                isUnique: true,
+                nullable: false,
+                span    : node.span,
+                type    : 'data',
+                to
+            },
+            valueKind: 'rvalue'
+        }
+
+    }
+
     private analyzeUnary( node: Unary, scope: Scope ): SemanticResult {
 
         switch( node.operator ){
@@ -761,19 +785,7 @@ class SemanticAnalizer {
                 return a.to
 
             }
-
-            case '^':  return {
-                type: {
-                    base    : 'uniqPtr',
-                    isUnique: true,
-                    nullable: false,
-                    span    : node.span,
-                    type    : 'data',
-                    to      : this.analyzeExpression( node.right, scope )
-                },
-                valueKind: 'rvalue'
-            }
-
+            case '^':  return this.analyzeUniquePtr( node, scope )
             case '&':  return {
                 type: {
                     isUnique: false,
@@ -1287,6 +1299,12 @@ class SemanticAnalizer {
                 
             }
 
+            if( a.base === 'uniqPtr' && a.to.type.isUnique ){
+
+                throw new Error(`Cannot create a unique pointer to a unique pointer`)
+
+            }
+
         } else {
 
             if( b.isUnique ){
@@ -1294,7 +1312,6 @@ class SemanticAnalizer {
                 throw new Error(`Cannot convert 'unique pointer' to 'raw pointer' ${ this.errorLocation( node.span ) }`)
 
             }
-
 
         }
 
