@@ -66,10 +66,7 @@ x.a;
 
 let code = `
 
-    int^ x = own 1;
-
-    int* a = x;
-
+    int^^ a = own 1;
     
 `
 

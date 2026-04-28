@@ -13,7 +13,6 @@
 #### DO NOW
 
 
-
 #### To Finish
 - float / double
 - once
@@ -31,6 +30,10 @@
 - try / catch / finnaly
 - ` to strings
 - generics model
+- spread list
+- spread object
+
+
 
 ### Done
 - primitive types ( except double/float )
