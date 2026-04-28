@@ -11,7 +11,7 @@
 
 
 #### DO NOW
-
+- list declaration ( fix )
 
 #### To Finish
 - float / double
@@ -55,6 +55,7 @@
 - a.b.c.a
 - call Methods
 - pointer / references
+- list access
 
 
 

@@ -45,8 +45,9 @@ export enum AstKind {
     OwnExpression         = "OwnExpression",
     // Dereference           = "Dereference",
     // Reference             = "Reference",
-
-
+    
+    
+    ListAccess          = "ListAccess",
     MemberAccess        = "MemberAccess",
     VariableDeclaration = "VariableDeclaration",
     MethodDeclaration   = "MethodDeclaration",
@@ -307,6 +308,13 @@ export interface OwnExpression extends Expr {
     kind: AstKind.OwnExpression
     span: Span
     expr: Expr
+}
+
+export interface ListAccess extends Expr {
+    kind   : AstKind.ListAccess
+    target : Expr
+    index  : Expr
+    span   : Span
 }
 
 // ----------------------------------- _Declarations_ ----------------------------------- \\
