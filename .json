@@ -1,67 +1,96 @@
 {
-   "kind": "Program",
-   "body": [
-      {
-         "kind": "ExpressionStatement",
-         "expression": {
-            "kind": "LiteralNumber",
-            "value": 10,
-            "span": {
-               "start": {
-                  "line": 3,
-                  "column": 5
+   "base": "list",
+   "nullable": false,
+   "span": {
+      "start": {
+         "line": 5,
+         "column": 19
+      },
+      "end": {
+         "line": 5,
+         "column": 21
+      }
+   },
+   "inner": {
+      "type": {
+         "base": "alias",
+         "nullable": false,
+         "span": {
+            "start": {
+               "line": 5,
+               "column": 21
+            },
+            "end": {
+               "line": 5,
+               "column": 23
+            }
+         },
+         "type": "data",
+         "isUnique": false,
+         "alias": {
+            "identifier": {
+               "kind": "LiteralIdentifier",
+               "name": "D1",
+               "span": {
+                  "start": {
+                     "line": 4,
+                     "column": 15
+                  },
+                  "end": {
+                     "line": 4,
+                     "column": 17
+                  }
+               }
+            },
+            "type": {
+               "kind": "Nullable",
+               "inner": {
+                  "kind": "Array",
+                  "inner": {
+                     "kind": "Base",
+                     "name": "int",
+                     "span": {
+                        "start": {
+                           "line": 4,
+                           "column": 21
+                        },
+                        "end": {
+                           "line": 4,
+                           "column": 24
+                        }
+                     }
+                  },
+                  "span": {
+                     "start": {
+                        "line": 4,
+                        "column": 19
+                     },
+                     "end": {
+                        "line": 4,
+                        "column": 21
+                     }
+                  }
                },
-               "end": {
-                  "line": 3,
-                  "column": 7
+               "span": {
+                  "start": {
+                     "line": 4,
+                     "column": 19
+                  },
+                  "end": {
+                     "line": 4,
+                     "column": 25
+                  }
                }
             }
          }
       },
-      {
-         "kind": "ExpressionStatement",
-         "expression": {
-            "kind": "BinaryExpression",
-            "left": {
-               "kind": "LiteralIdentifier",
-               "name": "x",
-               "span": {
-                  "start": {
-                     "line": 4,
-                     "column": 5
-                  },
-                  "end": {
-                     "line": 4,
-                     "column": 6
-                  }
-               }
-            },
-            "operator": "=",
-            "right": {
-               "kind": "LiteralNumber",
-               "value": 20,
-               "span": {
-                  "start": {
-                     "line": 4,
-                     "column": 9
-                  },
-                  "end": {
-                     "line": 4,
-                     "column": 11
-                  }
-               }
-            },
-            "span": {
-               "start": {
-                  "line": 4,
-                  "column": 5
-               },
-               "end": {
-                  "line": 4,
-                  "column": 11
-               }
-            }
-         }
-      }
-   ]
+      "valueKind": "lvalue"
+   },
+   "isUnique": false,
+   "type": "data"
 }
+
+
+
+
+

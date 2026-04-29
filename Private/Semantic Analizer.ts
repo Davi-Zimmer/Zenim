@@ -91,32 +91,41 @@ class SemanticAnalizer {
 
 
     private typeToString( t: SemanticType ): string {
+        
+        const nullableToString = ( s: string ) =>  t.nullable ? `${s}?` : s 
+
 
         if( t.base === 'ptr' ) {
 
-            return `${ this.typeToString( t.to.type ) }*`
+            return nullableToString( `${ this.typeToString( t.to.type ) }*` )
 
         }
 
         if( t.base === 'uniqPtr' ) {
 
-            return `${ this.typeToString( t.to.type ) }^`
+            return nullableToString( `${ this.typeToString( t.to.type ) }^` )
 
         }
 
         if( t.base === 'uniqVal' ){
 
-            return `${ this.typeToString( t.value.type ) }^`
+            return nullableToString( `${ this.typeToString( t.value.type ) }^` )
 
         }
 
         if( t.base === 'list' ){
 
-            return `${ this.typeToString( t.inner.type ) }[]`
+            return nullableToString( `Array<${ this.typeToString( t.inner.type ) }>` )
 
         }
 
-        return t.base!
+        if( t.base === 'alias' ){
+
+            return nullableToString( `${ this.typeToString( this.resolveType( t.alias.type ).type )  }`)
+
+        }
+
+        return nullableToString( t.base! )
 
     }
 
@@ -175,7 +184,7 @@ class SemanticAnalizer {
     }
 
     private resolveType( node: TypeAST ): SemanticResult { /////////////////// coisar o model aq 
-
+        
         switch( node.kind ){
             
             case 'Base': {
@@ -259,15 +268,11 @@ class SemanticAnalizer {
             case 'Nullable': {
 
                 const inner = this.resolveType( node.inner )
+                
+                inner.type.nullable = true
 
-                //@ts-ignore
                 return {
-                    type: {
-                        ...inner,
-                        nullable: true,
-                        span: node.span,
-                        type: 'data' 
-                    },
+                    type: inner.type,
                     valueKind: 'lvalue'
 
                 } as SemanticResult
@@ -1100,6 +1105,8 @@ class SemanticAnalizer {
 
         const aliasType = this.resolveType( alias.alias.type ).type
 
+        if( aliasType.nullable && base.base === 'list' && base.inner.type.base === 'any' ) return true
+
         return this.isAssignable( aliasType, base )
 
     }
@@ -1151,12 +1158,14 @@ class SemanticAnalizer {
 
     private isAssignable( a: SemanticType, b: SemanticType ): boolean {
 
-        if( b.base === 'any' ) return true
-        
         if( a.base === null ) return a.nullable
         
         if( a.base === 'alias' ) return this.resolveAssignableAlias( a, b )
         if( b.base === 'alias' ) return this.resolveAssignableAlias( b, a )
+
+        if( a.base === 'list'  && !a.nullable && b.base === 'any' ) return false
+
+        if( b.base === 'any' ) return true
 
         if( a.base === 'model' && b.base === 'object' ) return this.resolveAssignableObject( a, b )
         
@@ -1325,6 +1334,7 @@ class SemanticAnalizer {
     }
 
     private checkTypeExist( node: Statement, type: SemanticType ){
+
 
         if( !this.typeExist( type.base ) ) {
             

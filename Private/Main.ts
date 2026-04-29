@@ -60,44 +60,23 @@ x.a;
 */
 /*
    
+    ..int x = [ 0, 0 ];
 
-*/
+    ..( ..int ) y = [ [ '0' ] ];
 
+        alias D1: ..int;
+        alias D2: ..D1;
+        D2 test = [];
 
+    */
+   
+   
 let code = `
 
-    met 5..int getList() {
-        
-        5..int list = [ 0, 1, 2, 3, 4 ];
+    alias D1: ..int;
+    alias D2: ..D1;
+    D2 test = [ [] ];
 
-        list[ 0 ];
-
-        ret list;
-    }
-
-    getList()[ 1 ];
-
-    
-
-    alias x: ..int;
-    x numberList = [ 0, 1, 2 ];
-    numberList[ 0 ];
-
-
-
-
-    model Player {
-        str name, 
-        ..int items
-    };
-
-    Player p = {
-        name: "Player Irado",
-        items: [ 1 ]
-    };
-
-    p.items[ 0 ];
-    
 `
 
 
