@@ -1,3 +1,4 @@
+
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
 import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression, ListAccess } from "./Types/AST.js"
 import { Flow, SemanticType, ModelSymbol, MethodSymbol, SemanticResult } from "./Types/Semantic.js"
@@ -91,32 +92,43 @@ class SemanticAnalizer {
 
 
     private typeToString( t: SemanticType ): string {
+        
+        const nullableToString = ( s: string ) =>  t.nullable ? `${s}?` : s 
+
 
         if( t.base === 'ptr' ) {
 
-            return `${ this.typeToString( t.to.type ) }*`
+            return nullableToString( `${ this.typeToString( t.to.type ) }*` )
 
         }
 
         if( t.base === 'uniqPtr' ) {
 
-            return `${ this.typeToString( t.to.type ) }^`
+            return nullableToString( `${ this.typeToString( t.to.type ) }^` )
 
         }
 
         if( t.base === 'uniqVal' ){
 
-            return `${ this.typeToString( t.value.type ) }^`
+            return nullableToString( `${ this.typeToString( t.value.type ) }^` )
 
         }
 
         if( t.base === 'list' ){
 
-            return `${ this.typeToString( t.inner.type ) }[]`
+            return nullableToString( `Array<${ this.typeToString( t.inner.type ) }>` )
 
         }
 
-        return t.base!
+        if( t.base === 'alias' ){
+
+            const types = t.alias.types.map( aliasType => this.typeToString( this.resolveType( aliasType ).type ) )
+
+            return nullableToString( `${ types.join(' | ')  }`)
+
+        }
+
+        return nullableToString( t.base! )
 
     }
 
@@ -175,7 +187,7 @@ class SemanticAnalizer {
     }
 
     private resolveType( node: TypeAST ): SemanticResult { /////////////////// coisar o model aq 
-
+        
         switch( node.kind ){
             
             case 'Base': {
@@ -259,15 +271,11 @@ class SemanticAnalizer {
             case 'Nullable': {
 
                 const inner = this.resolveType( node.inner )
+                
+                inner.type.nullable = true
 
-                //@ts-ignore
                 return {
-                    type: {
-                        ...inner,
-                        nullable: true,
-                        span: node.span,
-                        type: 'data' 
-                    },
+                    type: inner.type,
                     valueKind: 'lvalue'
 
                 } as SemanticResult
@@ -860,7 +868,17 @@ class SemanticAnalizer {
 
         const aliasSymbol = this.scopeStack.scope.resolveAlias( n.name )
 
-        if( aliasSymbol ) return this.resolveType( aliasSymbol.type )
+        if( aliasSymbol ) return {
+            type: {
+                base     : 'alias',
+                alias    : aliasSymbol,
+                isUnique : false,
+                nullable : false,
+                span     : aliasSymbol.identifier.span,
+                type     : "data" 
+            },
+            valueKind : 'lvalue'
+        }
 
         throw new Error(`Identifier '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
 
@@ -1098,9 +1116,19 @@ class SemanticAnalizer {
 
         if( alias.base !== 'alias' ) return false
 
-        const aliasType = this.resolveType( alias.alias.type ).type
+        for( const type of alias.alias.types ){
 
-        return this.isAssignable( aliasType, base )
+            const aliasType = this.resolveType( type ).type
+            
+            if( aliasType.nullable && base.base === 'list' && base.inner.type.base === 'any' ) return true
+            
+            const result = this.isAssignable( aliasType, base )
+            
+            if( result ) return true
+
+        }
+
+        return false
 
     }
 
@@ -1151,12 +1179,14 @@ class SemanticAnalizer {
 
     private isAssignable( a: SemanticType, b: SemanticType ): boolean {
 
-        if( b.base === 'any' ) return true
-        
         if( a.base === null ) return a.nullable
         
         if( a.base === 'alias' ) return this.resolveAssignableAlias( a, b )
         if( b.base === 'alias' ) return this.resolveAssignableAlias( b, a )
+
+        if( a.base === 'list'  && !a.nullable && b.base === 'any' ) return false
+
+        if( b.base === 'any' ) return true
 
         if( a.base === 'model' && b.base === 'object' ) return this.resolveAssignableObject( a, b )
         
@@ -1325,6 +1355,7 @@ class SemanticAnalizer {
     }
 
     private checkTypeExist( node: Statement, type: SemanticType ){
+
 
         if( !this.typeExist( type.base ) ) {
             
@@ -1996,18 +2027,28 @@ class SemanticAnalizer {
     private aliasStatement( node: AliasStatement ) {
 
         for( const item of node.items ){
-
+            
             this.checkIdentifierExists( item )
 
-            const type = this.resolveType( item.type ).type
+            let types: TypeAST[] = []
 
-            this.checkTypeExist( node, type )
+            for( const aliasType of item.types ){
+                
+                const type = this.resolveType( aliasType.type ).type
+
+                this.checkTypeExist( node, type )
+
+                types.push( aliasType.type )
+
+            }
 
             this.scopeStack.scope.declareAlias({
+
                 identifier: item.identifier,
-                type: item.type
+                types
 
             })
+
             
         }
 

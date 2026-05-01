@@ -1,5 +1,5 @@
 import { convertToObject, convertTypeAcquisitionFromJson, idText, isTypeLiteralNode, textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel, OwnExpression, ListAccess } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel, OwnExpression, ListAccess, AliasType } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -331,7 +331,6 @@ class Parser {
                 }
                 continue
             }
-
 
             if( this.match( TKind.Circumflex ) ) {
                 type = {
@@ -1004,21 +1003,52 @@ class Parser {
 
     }
 
+    private parseAliasType(): AliasType[] {
+
+        // X: int | str;
+
+        const aliasTypes: AliasType[] = []
+
+        do {
+
+            const spanStart = this.tokenToSpan( this.peek() )
+
+            const type = this.parseType()
+
+            aliasTypes.push({
+
+                kind     : AstKind.AliasType,
+                modifiers: [],
+                span     : this.spanRange( spanStart.start, this.getPreviousSpan().end ),
+                type
+                
+            } as  AliasType )
+
+
+        } while( this.match( TKind.Or ) && !this.isAtEnd() )
+
+
+
+       
+
+        return aliasTypes
+
+    }
+
     private parseAliasItem(): AliasItem {
 
-        const spanStart = this.tokenToSpan( this.peek() )
-
         const identifier = this.parseIdentifier()
-        
+
+        const spanStart = this.getPreviousSpan()
+
         this.consume( TKind.Colon )
 
-        const type = this.parseType()
+        const types = this.parseAliasType()
 
         return {
             kind: AstKind.AliasItem,
-            type,
+            types,
             identifier,
-            modifiers: [],
             span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
 
         }

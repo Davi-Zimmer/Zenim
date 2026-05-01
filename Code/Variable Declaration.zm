@@ -176,3 +176,13 @@ met void sum() {
 }
 
 void a = sum();
+
+
+
+
+alias X: int | str;
+X test1 = "Sou Lindo";
+X test2 = 150;
+
+test1 = 500;
+test2 = "Sou Lindo Mesmo";

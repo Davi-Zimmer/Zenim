@@ -39,6 +39,7 @@ export enum AstKind {
     ModelFieldDeclaration = "ModelFieldDeclaration",
     AliasStatement        = "AliasStatement",
     AliasItem             = "AliasItem",
+    AliasType             = "AliasType",
     CallExpression        = "CallExpression",
     ObjectProps           = "ObjectProps",
     AssignableExpression  = "AssignableExpression",
@@ -149,11 +150,18 @@ export interface MatchStatement extends Statement {
 
 }
 
-export interface AliasItem extends Statement {
-    kind       : AstKind.AliasItem
+export interface AliasType extends Statement {
+    kind       : AstKind.AliasType
+    span       : Span
     type       : TypeAST
     modifiers  : Modifiers[]
+}
+
+export interface AliasItem extends Statement {
+    kind       : AstKind.AliasItem
+    types      : AliasType[]
     identifier : LiteralIdentifier
+
 }
 
 export interface AliasStatement extends Statement {

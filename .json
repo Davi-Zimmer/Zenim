@@ -2,64 +2,102 @@
    "kind": "Program",
    "body": [
       {
-         "kind": "ExpressionStatement",
-         "expression": {
-            "kind": "LiteralNumber",
-            "value": 10,
-            "span": {
-               "start": {
-                  "line": 3,
-                  "column": 5
+         "kind": "AliasStatement",
+         "items": [
+            {
+               "kind": "AliasItem",
+               "types": [
+                  {
+                     "kind": "AliasType",
+                     "modifiers": [],
+                     "span": {
+                        "start": {
+                           "line": 3,
+                           "column": 14
+                        },
+                        "end": {
+                           "line": 3,
+                           "column": 17
+                        }
+                     },
+                     "type": {
+                        "kind": "Base",
+                        "name": "int",
+                        "span": {
+                           "start": {
+                              "line": 3,
+                              "column": 14
+                           },
+                           "end": {
+                              "line": 3,
+                              "column": 17
+                           }
+                        }
+                     }
+                  },
+                  {
+                     "kind": "AliasType",
+                     "modifiers": [],
+                     "span": {
+                        "start": {
+                           "line": 3,
+                           "column": 20
+                        },
+                        "end": {
+                           "line": 3,
+                           "column": 23
+                        }
+                     },
+                     "type": {
+                        "kind": "Base",
+                        "name": "str",
+                        "span": {
+                           "start": {
+                              "line": 3,
+                              "column": 20
+                           },
+                           "end": {
+                              "line": 3,
+                              "column": 23
+                           }
+                        }
+                     }
+                  }
+               ],
+               "identifier": {
+                  "kind": "LiteralIdentifier",
+                  "name": "X",
+                  "span": {
+                     "start": {
+                        "line": 3,
+                        "column": 11
+                     },
+                     "end": {
+                        "line": 3,
+                        "column": 12
+                     }
+                  }
                },
-               "end": {
-                  "line": 3,
-                  "column": 7
+               "span": {
+                  "start": {
+                     "line": 3,
+                     "column": 11
+                  },
+                  "end": {
+                     "line": 3,
+                     "column": 23
+                  }
                }
             }
-         }
-      },
-      {
-         "kind": "ExpressionStatement",
-         "expression": {
-            "kind": "BinaryExpression",
-            "left": {
-               "kind": "LiteralIdentifier",
-               "name": "x",
-               "span": {
-                  "start": {
-                     "line": 4,
-                     "column": 5
-                  },
-                  "end": {
-                     "line": 4,
-                     "column": 6
-                  }
-               }
+         ],
+         "span": {
+            "start": {
+               "line": 3,
+               "column": 5
             },
-            "operator": "=",
-            "right": {
-               "kind": "LiteralNumber",
-               "value": 20,
-               "span": {
-                  "start": {
-                     "line": 4,
-                     "column": 9
-                  },
-                  "end": {
-                     "line": 4,
-                     "column": 11
-                  }
-               }
-            },
-            "span": {
-               "start": {
-                  "line": 4,
-                  "column": 5
-               },
-               "end": {
-                  "line": 4,
-                  "column": 11
-               }
+            "end": {
+               "line": 3,
+               "column": 24
             }
          }
       }
