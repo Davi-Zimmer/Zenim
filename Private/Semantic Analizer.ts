@@ -1,3 +1,4 @@
+
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
 import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression, ListAccess } from "./Types/AST.js"
 import { Flow, SemanticType, ModelSymbol, MethodSymbol, SemanticResult } from "./Types/Semantic.js"
@@ -121,7 +122,9 @@ class SemanticAnalizer {
 
         if( t.base === 'alias' ){
 
-            return nullableToString( `${ this.typeToString( this.resolveType( t.alias.type ).type )  }`)
+            const types = t.alias.types.map( aliasType => this.typeToString( this.resolveType( aliasType ).type ) )
+
+            return nullableToString( `${ types.join(' | ')  }`)
 
         }
 
@@ -865,7 +868,17 @@ class SemanticAnalizer {
 
         const aliasSymbol = this.scopeStack.scope.resolveAlias( n.name )
 
-        if( aliasSymbol ) return this.resolveType( aliasSymbol.type )
+        if( aliasSymbol ) return {
+            type: {
+                base     : 'alias',
+                alias    : aliasSymbol,
+                isUnique : false,
+                nullable : false,
+                span     : aliasSymbol.identifier.span,
+                type     : "data" 
+            },
+            valueKind : 'lvalue'
+        }
 
         throw new Error(`Identifier '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
 
@@ -1103,11 +1116,19 @@ class SemanticAnalizer {
 
         if( alias.base !== 'alias' ) return false
 
-        const aliasType = this.resolveType( alias.alias.type ).type
+        for( const type of alias.alias.types ){
 
-        if( aliasType.nullable && base.base === 'list' && base.inner.type.base === 'any' ) return true
+            const aliasType = this.resolveType( type ).type
+            
+            if( aliasType.nullable && base.base === 'list' && base.inner.type.base === 'any' ) return true
+            
+            const result = this.isAssignable( aliasType, base )
+            
+            if( result ) return true
 
-        return this.isAssignable( aliasType, base )
+        }
+
+        return false
 
     }
 
@@ -2006,18 +2027,28 @@ class SemanticAnalizer {
     private aliasStatement( node: AliasStatement ) {
 
         for( const item of node.items ){
-
+            
             this.checkIdentifierExists( item )
 
-            const type = this.resolveType( item.type ).type
+            let types: TypeAST[] = []
 
-            this.checkTypeExist( node, type )
+            for( const aliasType of item.types ){
+                
+                const type = this.resolveType( aliasType.type ).type
+
+                this.checkTypeExist( node, type )
+
+                types.push( aliasType.type )
+
+            }
 
             this.scopeStack.scope.declareAlias({
+
                 identifier: item.identifier,
-                type: item.type
+                types
 
             })
+
             
         }
 

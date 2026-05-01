@@ -1,96 +1,105 @@
 {
-   "base": "list",
-   "nullable": false,
-   "span": {
-      "start": {
-         "line": 5,
-         "column": 19
-      },
-      "end": {
-         "line": 5,
-         "column": 21
-      }
-   },
-   "inner": {
-      "type": {
-         "base": "alias",
-         "nullable": false,
-         "span": {
-            "start": {
-               "line": 5,
-               "column": 21
-            },
-            "end": {
-               "line": 5,
-               "column": 23
-            }
-         },
-         "type": "data",
-         "isUnique": false,
-         "alias": {
-            "identifier": {
-               "kind": "LiteralIdentifier",
-               "name": "D1",
-               "span": {
-                  "start": {
-                     "line": 4,
-                     "column": 15
-                  },
-                  "end": {
-                     "line": 4,
-                     "column": 17
-                  }
-               }
-            },
-            "type": {
-               "kind": "Nullable",
-               "inner": {
-                  "kind": "Array",
-                  "inner": {
-                     "kind": "Base",
-                     "name": "int",
+   "kind": "Program",
+   "body": [
+      {
+         "kind": "AliasStatement",
+         "items": [
+            {
+               "kind": "AliasItem",
+               "types": [
+                  {
+                     "kind": "AliasType",
+                     "modifiers": [],
                      "span": {
                         "start": {
-                           "line": 4,
-                           "column": 21
+                           "line": 3,
+                           "column": 14
                         },
                         "end": {
-                           "line": 4,
-                           "column": 24
+                           "line": 3,
+                           "column": 17
+                        }
+                     },
+                     "type": {
+                        "kind": "Base",
+                        "name": "int",
+                        "span": {
+                           "start": {
+                              "line": 3,
+                              "column": 14
+                           },
+                           "end": {
+                              "line": 3,
+                              "column": 17
+                           }
                         }
                      }
                   },
+                  {
+                     "kind": "AliasType",
+                     "modifiers": [],
+                     "span": {
+                        "start": {
+                           "line": 3,
+                           "column": 20
+                        },
+                        "end": {
+                           "line": 3,
+                           "column": 23
+                        }
+                     },
+                     "type": {
+                        "kind": "Base",
+                        "name": "str",
+                        "span": {
+                           "start": {
+                              "line": 3,
+                              "column": 20
+                           },
+                           "end": {
+                              "line": 3,
+                              "column": 23
+                           }
+                        }
+                     }
+                  }
+               ],
+               "identifier": {
+                  "kind": "LiteralIdentifier",
+                  "name": "X",
                   "span": {
                      "start": {
-                        "line": 4,
-                        "column": 19
+                        "line": 3,
+                        "column": 11
                      },
                      "end": {
-                        "line": 4,
-                        "column": 21
+                        "line": 3,
+                        "column": 12
                      }
                   }
                },
                "span": {
                   "start": {
-                     "line": 4,
-                     "column": 19
+                     "line": 3,
+                     "column": 11
                   },
                   "end": {
-                     "line": 4,
-                     "column": 25
+                     "line": 3,
+                     "column": 23
                   }
                }
             }
+         ],
+         "span": {
+            "start": {
+               "line": 3,
+               "column": 5
+            },
+            "end": {
+               "line": 3,
+               "column": 24
+            }
          }
-      },
-      "valueKind": "lvalue"
-   },
-   "isUnique": false,
-   "type": "data"
+      }
+   ]
 }
-
-
-
-
-
