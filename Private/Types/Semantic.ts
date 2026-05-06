@@ -18,6 +18,8 @@ export type SemanticType =
     | { base: 'ptr'       | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', to: SemanticResult }
     | { base: 'uniqPtr'   | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', to: SemanticResult }
     | { base: 'uniqVal'   | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', value: SemanticResult }
+  //   | { base: 'union'     | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', types: SemanticType }
+
 
 export type SemanticResult = {
     type: SemanticType
