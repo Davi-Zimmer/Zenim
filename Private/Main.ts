@@ -68,22 +68,17 @@ x.a;
         alias D2: ..D1;
         D2 test = [];
 
+        test1 = 500;
+        test2 = "Sou Lindo Mesmo";
+
     */
    
    
 let code = `
-
     alias X: int | str;
+    X test2 = "f";
 
-    X test1 = "Sou Lindo";
-
-    X test2 = 150;
-
-
-    test1 = 500;
-
-    test2 = "Sou Lindo Mesmo";
-
+    str x = test2;
 
 `
 

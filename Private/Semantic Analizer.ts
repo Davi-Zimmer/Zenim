@@ -1112,14 +1112,51 @@ class SemanticAnalizer {
 
     }
 
+
     private resolveAssignableAlias( alias: SemanticType, base: SemanticType ) {
 
-        if( alias.base !== 'alias' ) return false
+        if( alias.base === 'alias' ) {
+
+            const x = alias.alias.types.map( type => {
+
+                const aliasType = this.resolveType( type ).type
+
+                if( aliasType.nullable && base.base === 'list' && base.inner.type.base === 'any' ) return true
+
+                return this.isAssignable( aliasType, base )
+
+            })
+
+            return x.some( b => b === true )
+ 
+        }
+
+
+        if( base.base === 'alias' ) {
+
+            const x = base.alias.types.map( type => {
+                
+                const aliasType = this.resolveType( type ).type
+
+                if( aliasType.nullable && alias.base === 'list' && alias.inner.type.base === 'any' ) return true
+
+                return this.isAssignable( aliasType, alias )
+
+            })
+            
+            return x.every( b => b === true )
+
+        }
+
+        return false
+
+    
+        /*
 
         for( const type of alias.alias.types ){
-
+    
             const aliasType = this.resolveType( type ).type
-            
+                
             if( aliasType.nullable && base.base === 'list' && base.inner.type.base === 'any' ) return true
             
             const result = this.isAssignable( aliasType, base )
@@ -1128,7 +1165,18 @@ class SemanticAnalizer {
 
         }
 
-        return false
+        for( const type of base.alias.types ){
+            
+            const aliasType = this.resolveType( type ).type
+            
+            if( aliasType.nullable && alias.base === 'list' && alias.inner.type.base === 'any' ) return true
+            
+            const result = this.isAssignable( aliasType, alias )
+            
+            if( result ) return true
+
+        }
+        */
 
     }
 
@@ -1181,8 +1229,8 @@ class SemanticAnalizer {
 
         if( a.base === null ) return a.nullable
         
-        if( a.base === 'alias' ) return this.resolveAssignableAlias( a, b )
-        if( b.base === 'alias' ) return this.resolveAssignableAlias( b, a )
+        if( a.base === 'alias' || b.base === 'alias' ) return this.resolveAssignableAlias( a, b )
+        // if( b.base === 'alias' ) return this.resolveAssignableAlias( b, a )
 
         if( a.base === 'list'  && !a.nullable && b.base === 'any' ) return false
 
@@ -1197,8 +1245,6 @@ class SemanticAnalizer {
         if( a.base === 'ptr' && b.base === 'ptr' ) return this.isAssignable( a.to.type, b.to.type )
 
         if( a.base === 'ptr' && b.base === 'null' ) return true
-
-        // if( a.base === 'uniqPtr' && b.base === 'ptr' ) return true
 
         if( a.base === 'uniqPtr' && b.base === 'uniqVal' ) return this.isAssignable( a.to.type, b.value.type )
 
@@ -1370,6 +1416,7 @@ class SemanticAnalizer {
         const a = aSemanticResult.type
         const b = bSemanticResult.type
 
+
         if( a.isUnique ){
 
             if( b.base === 'uniqPtr' || ( b.base === 'uniqVal' && b.value.type.base === 'uniqPtr' ) ){
@@ -1409,6 +1456,12 @@ class SemanticAnalizer {
                 throw new Error(`Cannot convert 'unique pointer' to 'raw pointer' ${ this.errorLocation( node.span ) }`)
 
             }
+
+        }
+
+        if( b.base === 'alias' ){
+
+            console.log( a.base, b.base )
 
         }
 
