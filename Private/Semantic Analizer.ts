@@ -1,6 +1,6 @@
 
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
-import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression, ListAccess } from "./Types/AST.js"
+import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression, ListAccess, TypeOperatorExpression, TypeItem } from "./Types/AST.js"
 import { Flow, SemanticType, ModelSymbol, MethodSymbol, SemanticResult } from "./Types/Semantic.js"
 
 type baseType = 
@@ -21,6 +21,8 @@ type baseType =
     | 'ptr'
     | 'uniqPtr'
     | 'uniqVal'
+    | 'union'
+    | 'typeUnion'
 
 
 class SemanticAnalizer {
@@ -125,6 +127,21 @@ class SemanticAnalizer {
             const types = t.alias.types.map( aliasType => this.typeToString( this.resolveType( aliasType ).type ) )
 
             return nullableToString( `${ types.join(' | ')  }`)
+
+        }
+
+        if( t.base === 'union' ){
+
+            const types = t.types.map( t => this.typeToString( this.resolveType( t ).type ) )
+
+            return nullableToString( `${ types.join(' | ')  }`)
+
+        }
+
+        if( t.base === 'typeUnion' ){
+
+
+            return nullableToString( `${ this.typeToString( t.types.type )  }`)
 
         }
 
@@ -867,7 +884,6 @@ class SemanticAnalizer {
         }
 
         const aliasSymbol = this.scopeStack.scope.resolveAlias( n.name )
-
         if( aliasSymbol ) return {
             type: {
                 base     : 'alias',
@@ -918,6 +934,76 @@ class SemanticAnalizer {
 
         // if( targ.type.size > index.type ){}
 
+
+    }
+
+    private parseUnion( types: TypeItem[] ): SemanticResult {
+
+        const span = this.spanRange( types[0].span, types[ types.length - 1 ].span )
+
+        const semantic = types.map( t => t.type )
+
+        return {
+            type: {
+                base     : 'union',
+                isUnique : false,
+                nullable : false,
+                type     : "data",
+                types    : semantic,
+                span
+            },
+            valueKind: 'rvalue'
+
+        }
+
+    }
+
+    private analyzeTypeOperator( node: TypeOperatorExpression, scope: Scope ): SemanticResult {
+
+        const leftType = this.analyzeExpression( node.left, scope )
+
+        const union = this.parseUnion( node.types )
+        console.log( node.operator + "______________")
+
+        if( node.operator === 'is' ){
+
+            // XD
+
+            return {
+
+                type: {
+                    base: 'bool',
+                    isUnique: false,
+                    nullable: false,
+                    span: node.span,
+                    type: 'data'
+                },
+                valueKind: 'rvalue'
+
+            }
+
+        }
+
+        if( union.type.base === 'union' ){
+            
+            const isCompatible = union.type.types.map( tItem => this.isAssignable( leftType.type, this.resolveType( tItem ).type ) ).some( b => b === true )
+            
+            if( !isCompatible ) throw new Error(`Type '${ this.typeToString( leftType.type ) }' is not compatible with '${ this.typeToString( union.type ) }' ${this.errorLocation( union.type.span ) }`)
+
+        }
+
+        return {
+
+            type: {
+                base: 'typeUnion',
+                isUnique: false,
+                left: leftType,
+                nullable: false,
+                type: 'data',
+                types: union
+            },
+            valueKind: 'rvalue'
+        } as SemanticResult
 
     }
 
@@ -1015,19 +1101,19 @@ class SemanticAnalizer {
 
             case AstKind.UnaryExpression: return this.analyzeUnary( node as Unary, scope )
 
-
             case AstKind.LiteralIdentifier: return this.analyzeIdentifier( node as LiteralIdentifier, scope )
 
             case AstKind.CallExpression: return this.analyzeCallExpression( node as CallExpression )
 
             case AstKind.LiteralModel: return this.analyzeLiteralModel( node as LiteralModel )
-            // case AstKind.MemberAccess : return this.analyzeMemberAccess( node as MemberAccess )
 
             case AstKind.ExpressionStatement: return this.analyzeExpressionStatement( node as ExpressionStatement )
 
             case AstKind.OwnExpression: return this.analyzeOwnExpression( node as OwnExpression, scope )
 
             case AstKind.ListAccess: return this.listAccess( node as ListAccess, scope )
+
+            case AstKind.TypeOperatorExpression: return this.analyzeTypeOperator( node as TypeOperatorExpression, scope ) 
 
             default: {
 
@@ -1112,7 +1198,6 @@ class SemanticAnalizer {
 
     }
 
-
     private resolveAssignableAlias( alias: SemanticType, base: SemanticType ) {
 
         if( alias.base === 'alias' ) {
@@ -1150,33 +1235,6 @@ class SemanticAnalizer {
 
         return false
 
-    
-        /*
-
-        for( const type of alias.alias.types ){
-    
-            const aliasType = this.resolveType( type ).type
-                
-            if( aliasType.nullable && base.base === 'list' && base.inner.type.base === 'any' ) return true
-            
-            const result = this.isAssignable( aliasType, base )
-            
-            if( result ) return true
-
-        }
-
-        for( const type of base.alias.types ){
-            
-            const aliasType = this.resolveType( type ).type
-            
-            if( aliasType.nullable && alias.base === 'list' && alias.inner.type.base === 'any' ) return true
-            
-            const result = this.isAssignable( aliasType, alias )
-            
-            if( result ) return true
-
-        }
-        */
 
     }
 
@@ -1225,12 +1283,39 @@ class SemanticAnalizer {
 
     }
 
+    private resolveTypeUnion( a: SemanticType, b: SemanticType ){
+
+        if( b.base === "typeUnion" ){
+
+            return this.isAssignable( a, b.types.type )
+
+        }
+
+        return false
+
+    }
+
+    private resolveUnion( a: SemanticType, b: SemanticType ) {
+
+        if( b.base === 'union' ) {
+
+            return b.types.map( e => this.isAssignable( a, this.resolveType( e ).type ) ).some( b => b === true )
+
+        }
+
+        return false
+
+    }
+
     private isAssignable( a: SemanticType, b: SemanticType ): boolean {
 
         if( a.base === null ) return a.nullable
         
         if( a.base === 'alias' || b.base === 'alias' ) return this.resolveAssignableAlias( a, b )
-        // if( b.base === 'alias' ) return this.resolveAssignableAlias( b, a )
+
+        if( b.base === 'typeUnion' ) return this.resolveTypeUnion( a, b )
+
+        if( b.base === 'union' ) return this.resolveUnion( a, b )
 
         if( a.base === 'list'  && !a.nullable && b.base === 'any' ) return false
 
@@ -1402,7 +1487,6 @@ class SemanticAnalizer {
 
     private checkTypeExist( node: Statement, type: SemanticType ){
 
-
         if( !this.typeExist( type.base ) ) {
             
             throw new Error(`Type '${ type.base }' was never declared ${ this.errorLocation( node.span ) }`)
@@ -1415,7 +1499,6 @@ class SemanticAnalizer {
 
         const a = aSemanticResult.type
         const b = bSemanticResult.type
-
 
         if( a.isUnique ){
 
@@ -1466,7 +1549,7 @@ class SemanticAnalizer {
         }
 
     }
-
+    
     private checkInitializer( node: VariableDeclaration | MethodParams | ModelFieldDeclaration, typeSemanticResult: SemanticResult ){
 
         if( node.initializer ){
@@ -2116,6 +2199,16 @@ class SemanticAnalizer {
     private binaryExpression( node: BinaryExpression ){
         
         return this.analyzeExpression( node, this.scopeStack.scope )
+
+    }
+
+    private typeOperatorExpression( node: TypeOperatorExpression ) {
+
+        const a = this.analyzeExpression( node, this.scopeStack.scope )
+
+        console.log( a )
+
+        return a 
 
     }
 

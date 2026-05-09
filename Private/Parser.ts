@@ -1,5 +1,5 @@
 import { convertToObject, convertTypeAcquisitionFromJson, idText, isTypeLiteralNode, textChangeRangeIsUnchanged } from "typescript"
-import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel, OwnExpression, ListAccess, AliasType } from "./Types/AST.js"
+import { AstKind, Expr, LiteralChar, LiteralNumber, LiteralNull, LiteralString, LiteralVoid, Modifiers, Statement, ExpressionStatement, LiteralBool, MemberAccess, Unary, BinaryExpression, VariableDeclaration, TypeAST, Program, LiteralIdentifier, Span, ModifierNames, BlockStatement, IfElseStatement, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, MethodDeclaration, MethodParams, MethodReturn, ReturnStatement, ModelDeclaration, ModelFieldDeclaration, AliasStatement, AliasItem, CallExpression, ObjectProps, LiteralModel, OwnExpression, ListAccess, TypeOperatorExpression, TypeItem } from "./Types/AST.js"
 import { TKind, Token } from "./Types/Tokens.js"
 
 class Parser {
@@ -1003,11 +1003,11 @@ class Parser {
 
     }
 
-    private parseAliasType(): AliasType[] {
+    private parseTypeItems(): TypeItem[] {
 
         // X: int | str;
 
-        const aliasTypes: AliasType[] = []
+        const aliasTypes: TypeItem[] = []
 
         do {
 
@@ -1022,14 +1022,11 @@ class Parser {
                 span     : this.spanRange( spanStart.start, this.getPreviousSpan().end ),
                 type
                 
-            } as  AliasType )
+            } as  TypeItem )
 
 
         } while( this.match( TKind.Or ) && !this.isAtEnd() )
 
-
-
-       
 
         return aliasTypes
 
@@ -1043,7 +1040,7 @@ class Parser {
 
         this.consume( TKind.Colon )
 
-        const types = this.parseAliasType()
+        const types = this.parseTypeItems()
 
         return {
             kind: AstKind.AliasItem,
@@ -1196,13 +1193,13 @@ class Parser {
 
     private logicalAnd() {
 
-        let expr = this.equality()
+        let expr = this.typeOperators()
 
         if( this.match( TKind.AndAnd ) ){
 
             const operator = this.previus()
 
-            const right = this.equality()
+            const right = this.typeOperators()
 
             expr = {
                 kind: AstKind.BinaryExpression,
@@ -1211,6 +1208,35 @@ class Parser {
                 right,
                 span: this.spanRange( expr.span.start, right.span.end )
             } as BinaryExpression
+
+        }
+
+        return expr
+
+    }
+
+    private typeOperators() {
+
+        let expr = this.equality()
+
+        if( this.match( TKind.As, TKind.Is ) ){
+
+            const spanStart = this.getPreviousSpan().start
+
+            const operator = this.previus()
+
+            // const right = this.equality()
+
+            const types = this.parseTypeItems()
+
+            expr = {
+                kind: AstKind.TypeOperatorExpression,
+                operator: operator.lexeme as string,
+                left: expr,
+                types,
+                span: this.spanRange( spanStart, types[ types.length - 1 ].span.end )
+
+            } as TypeOperatorExpression
 
         }
 

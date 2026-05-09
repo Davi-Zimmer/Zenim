@@ -92,7 +92,9 @@ export enum TKind {
     Ret     = "Ret",
     Model   = "Model",
     Alias   = "Alias",
-    Own     = "Own"
+    Own     = "Own",
+    Is      = "Is",
+    As      = "As"
 }
 
 

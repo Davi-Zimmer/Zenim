@@ -71,14 +71,27 @@ x.a;
         test1 = 500;
         test2 = "Sou Lindo Mesmo";
 
+        
+        alias X: int | str;
+        X test2 = "f";
+     
+        str x = test2;
     */
    
    
 let code = `
-    alias X: int | str;
-    X test2 = "f";
 
-    str x = test2;
+    alias AlphaNumeric: str | int;
+
+    AlphaNumeric var = 10;
+
+    int number = var as int;
+    
+    if( var is str ){
+    
+    }
+
+    
 
 `
 
