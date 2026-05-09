@@ -92,7 +92,6 @@ class SemanticAnalizer {
 
     // ------------------------------------------ Helpers ------------------------------------------ \\
 
-
     private typeToString( t: SemanticType ): string {
         
         const nullableToString = ( s: string ) =>  t.nullable ? `${s}?` : s 
@@ -142,6 +141,33 @@ class SemanticAnalizer {
 
 
             return nullableToString( `${ this.typeToString( t.types.type )  }`)
+
+        }
+
+
+        if( t.base === 'model' ){
+
+            const types = [ ...t.model.fields ].map( e => {
+                
+                const field = this.resolveType( e[1].type )
+
+                return `${ this.typeToString( field.type ) } ${ e[0] }`
+
+            })
+
+            return nullableToString( `${ t.model.identifier.name }: { ${ types.join( ', ' ) } }` )
+            
+        }
+
+        if( t.base === 'object' ) {
+
+            const types = [ ...t.props ].map( e => {
+                
+                return `${ this.typeToString( e[1].type ) } ${ e[0] }`
+
+            })
+
+            return nullableToString( `{ ${ types.join( ', ' ) } }` )
 
         }
 
@@ -643,7 +669,6 @@ class SemanticAnalizer {
         return item
 
         /*
-        console.log( item )
 
         if( item.base !== 'model' ){
 
@@ -963,7 +988,6 @@ class SemanticAnalizer {
         const leftType = this.analyzeExpression( node.left, scope )
 
         const union = this.parseUnion( node.types )
-        console.log( node.operator + "______________")
 
         if( node.operator === 'is' ){
 
@@ -1138,7 +1162,7 @@ class SemanticAnalizer {
 
     }
 
-    private resolveAssignableObject( model: SemanticType, object: SemanticType ){
+    private resolveAssignableObject( model: SemanticType, object: SemanticType, throwError: boolean ){
         
         if( object.base === 'object' && model.base === 'model' ){
 
@@ -1147,8 +1171,14 @@ class SemanticAnalizer {
                 const objPropType = object.props.get( key )?.type
 
                 if( !objPropType ){
+                    
+                    if( throwError ){
 
-                    throw new Error(`Missing property '${ key }' in literal object ${ this.errorLocation( object.span ) }`)
+                        throw new Error(`Missing property '${ key }' in literal object ${ this.errorLocation( object.span ) }`)
+                    
+                    }
+
+                    return false
 
                 }
 
@@ -1159,22 +1189,34 @@ class SemanticAnalizer {
                     const aType = targetProp.type
 
                     if( aType.kind === 'Base' ){
-
-                        throw new Error(`Property '${ objPropType.base }' is not assignable with type '${ aType.name }' ${ this.errorLocation( objPropType.span ) }`)
                         
+                        if( throwError ){
+                            
+                            throw new Error(`Property '${ objPropType.base }' is not assignable with type '${ aType.name }' ${ this.errorLocation( objPropType.span ) }`)
+
+                        }
+
+                        return false
+   
                     }
 
                     if( aType.kind === 'Array' ){
 
-                        const t = this.resolveType( aType )
+                        if( throwError ){
 
-                        throw new Error(`Property '${ this.typeToString( objPropType ) }' is not assignable with type '${ this.typeToString( t.type ) }' ${ this.errorLocation( objPropType.span ) }`)
+                            const t = this.resolveType( aType )
+                            throw new Error(`Property '${ this.typeToString( objPropType ) }' is not assignable with type '${ this.typeToString( t.type ) }' ${ this.errorLocation( objPropType.span ) }`)
+
+                        }
+
+                        return false
 
                     }
 
                     // throw new Error(`Literal object property named ${ key } is not assignable with type ${} ${ this.errorLocation( objPropType.span ) }`)
-                    
-                    throw new Error(`Error in Error XD`)
+                    if( throwError ) throw new Error(`Error in Error XD`)
+
+                    return false 
 
                 }
                 
@@ -1184,7 +1226,13 @@ class SemanticAnalizer {
 
                 if( !model.model.fields.has( key ) ){
 
-                    throw new Error(`Model '${ model.base }' does not have '${ key }' field ${ this.errorLocation( object.span ) }`)
+                    if( throwError ){
+
+                        throw new Error(`Model '${ this.typeToString( model ) }' does not have '${ key }' field ${ this.errorLocation( object.span ) }`)
+
+                    }
+
+                    return false
 
                 }
 
@@ -1212,10 +1260,10 @@ class SemanticAnalizer {
 
             })
 
+
             return x.some( b => b === true )
  
         }
-
 
         if( base.base === 'alias' ) {
 
@@ -1321,7 +1369,7 @@ class SemanticAnalizer {
 
         if( b.base === 'any' ) return true
 
-        if( a.base === 'model' && b.base === 'object' ) return this.resolveAssignableObject( a, b )
+        if( a.base === 'model' && b.base === 'object' ) return this.resolveAssignableObject( a, b, false )
         
         if( a.base === 'list' && b.base === 'list' ) return this.isAssignable( a.inner.type, b.inner.type )
                 
@@ -1545,6 +1593,14 @@ class SemanticAnalizer {
         if( b.base === 'alias' ){
 
             console.log( a.base, b.base )
+
+        }
+
+        if( b.base === 'object' ){
+            
+            // if( a.base === 'model' )  this.resolveAssignableObject( b, a, true )
+            // check model keys??
+            
 
         }
 
@@ -2204,11 +2260,7 @@ class SemanticAnalizer {
 
     private typeOperatorExpression( node: TypeOperatorExpression ) {
 
-        const a = this.analyzeExpression( node, this.scopeStack.scope )
-
-        console.log( a )
-
-        return a 
+        return this.analyzeExpression( node, this.scopeStack.scope )
 
     }
 

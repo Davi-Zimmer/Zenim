@@ -76,22 +76,33 @@ x.a;
         X test2 = "f";
      
         str x = test2;
+        
+        
+        alias AlphaNumeric: str | int;
+        
+        AlphaNumeric var = 10;
+        
+        int number = var as int;
+        
+        if( var is str ){
+        
+        }
+
+         A XD = { a: 1 }; /// falaq que 'b' é missing
     */
    
    
 let code = `
 
-    alias AlphaNumeric: str | int;
+    model modelo { int a };
 
-    AlphaNumeric var = 10;
+    model sla { str b, int c };
 
-    int number = var as int;
-    
-    if( var is str ){
-    
-    }
+    alias A: modelo | sla; 
 
-    
+    A XD = { c: 1, b: "a" };
+
+    A XD2 = { a: 1 };
 
 `
 
