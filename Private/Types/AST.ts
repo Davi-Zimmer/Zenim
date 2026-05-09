@@ -44,6 +44,7 @@ export enum AstKind {
     ObjectProps           = "ObjectProps",
     AssignableExpression  = "AssignableExpression",
     OwnExpression         = "OwnExpression",
+    TypeOperatorExpression= "TypeOperatorExpression",
     // Dereference           = "Dereference",
     // Reference             = "Reference",
     
@@ -150,7 +151,7 @@ export interface MatchStatement extends Statement {
 
 }
 
-export interface AliasType extends Statement {
+export interface TypeItem extends Statement {
     kind       : AstKind.AliasType
     span       : Span
     type       : TypeAST
@@ -159,7 +160,7 @@ export interface AliasType extends Statement {
 
 export interface AliasItem extends Statement {
     kind       : AstKind.AliasItem
-    types      : AliasType[]
+    types      : TypeItem[]
     identifier : LiteralIdentifier
 
 }
@@ -325,6 +326,13 @@ export interface ListAccess extends Expr {
     span   : Span
 }
 
+export interface TypeOperatorExpression extends Expr {
+    kind       : AstKind.TypeOperatorExpression
+    operator   : 'is' | 'as'
+    left       : Expr
+    types      : TypeItem[]
+}
+
 // ----------------------------------- _Declarations_ ----------------------------------- \\
 export type TypeAST =
   | { span: Span, kind: "Base", name: string }
@@ -335,10 +343,9 @@ export type TypeAST =
   | { span: Span, kind: "Model", model: ModelSymbol }
   | { span: Span, kind: "Reference", refName: string }
 
-export interface TypedBinding {
+
+export interface TypedBinding extends TypeItem {
     identifier : string
-    type       : TypeAST
-    modifiers ?: Modifiers[]
 }
 
 export interface VariableDeclaration extends Statement {

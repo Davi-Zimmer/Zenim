@@ -42,7 +42,9 @@ export class Lexer {
         ret   : TKind.Ret,
         model : TKind.Model,
         alias : TKind.Alias,
-        own   : TKind.Own 
+        own   : TKind.Own,
+        as    : TKind.As,
+        is    : TKind.Is
 
     }
 

@@ -15,10 +15,10 @@ export enum ScopeKinds {
 
 export class Scope {
 
-    private variables = new Map< string, SymbolInfo >()
-    private models    = new Map< string, ModelSymbol >()
+    private variables = new Map< string, SymbolInfo   >()
+    private models    = new Map< string, ModelSymbol  >()
     private methods   = new Map< string, MethodSymbol >()
-    private alias     = new Map< string, AliasSymbol >()
+    private alias     = new Map< string, AliasSymbol  >()
 
     public parent : Scope | null = null
     public kind   : ScopeKinds

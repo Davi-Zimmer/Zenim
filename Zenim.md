@@ -11,7 +11,9 @@
 
 
 #### DO NOW
-- list declaration ( fix )
+- is
+- as
+
 
 #### To Finish
 - float / double
