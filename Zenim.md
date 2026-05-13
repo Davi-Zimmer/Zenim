@@ -11,8 +11,8 @@
 
 
 #### DO NOW
-- is
-- as
+
+- modifiers ( fix )
 
 
 #### To Finish
@@ -39,7 +39,7 @@
 
 ### Done
 - primitive types ( except double/float )
-- pointers ( half )
+- pointers
 - blocks
 - if/else
 - for in/of
@@ -54,11 +54,11 @@
 - model + composition
 - alias (type)
 - model declaration
-- a.b.c.a
+- member access a.b.c.a
 - call Methods
 - pointer / references
 - list access
-
+- is / as
 
 
 # What would i like to say about this project?

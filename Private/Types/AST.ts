@@ -1,5 +1,4 @@
 import { ModelSymbol } from "./Semantic.js"
-import { TKind, Token } from "./Tokens.js"
 
 export enum AstKind {
     LiteralNumber     = "LiteralNumber",
@@ -342,7 +341,7 @@ export type TypeAST =
   | { span: Span, kind: "Nullable", inner: TypeAST }
   | { span: Span, kind: "Model", model: ModelSymbol }
   | { span: Span, kind: "Reference", refName: string }
-
+  | { span: Span, kind: "Mut", inner: TypeAST }
 
 export interface TypedBinding extends TypeItem {
     identifier : string
@@ -402,7 +401,6 @@ export type Modifiers = {
     span: Span
 }
 
-
-
-
 export type AST = Program | Statement | Expr
+
+

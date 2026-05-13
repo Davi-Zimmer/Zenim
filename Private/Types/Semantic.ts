@@ -1,25 +1,60 @@
 import { LiteralIdentifier, Span, TypeAST } from "./AST.js"
 
-export type SemanticType =
-    | { base: 'str'       | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'bool'      | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'char'      | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'void'      | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'null'      | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'int'       | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'dbl'       | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'flt'       | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'any'       | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data' }
-    | { base: 'model'     | null, nullable: boolean, isUnique: boolean, span: Span, model: ModelSymbol, type: 'data' }
-    | { base: 'alias'     | null, nullable: boolean, isUnique: boolean, span: Span, alias: AliasSymbol, type: 'data' }
-    | { base: 'list'      | null, nullable: boolean, isUnique: boolean, span: Span, inner: SemanticResult, size: number, type: 'data' }
-    | { base: 'object'    | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', props: Map< string, SemanticResult > }
-    | { base: 'method'    | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', method: MethodSymbol }
-    | { base: 'ptr'       | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', to: SemanticResult }
-    | { base: 'uniqPtr'   | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', to: SemanticResult }
-    | { base: 'uniqVal'   | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', value: SemanticResult }
-    | { base: 'union'     | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', types: TypeAST[] }
-    | { base: 'typeUnion' | null, nullable: boolean, isUnique: boolean, span: Span, type: 'data', left: SemanticResult, types: SemanticResult }
+export type SemanticGeneric = {
+    nullable: boolean
+    isUnique: boolean
+    mutable: boolean 
+    span: Span
+    type: 'data'
+}
+
+export type baseType = 
+    | 'str'
+    | 'bool'
+    | 'char'
+    | 'void'
+    | 'null'
+    | 'int'
+    | 'flt'
+    | 'dbl'
+    | 'list'
+    | 'any'
+    | 'model'
+    | 'object'
+    | 'alias'
+    | 'method'
+    | 'ptr'
+    | 'uniqPtr'
+    | 'uniqVal'
+    | 'union'
+    | 'typeUnion'
+
+
+export type SemanticAttributes =
+    | { base: 'str'       | null }
+    | { base: 'bool'      | null }
+    | { base: 'char'      | null }
+    | { base: 'void'      | null }
+    | { base: 'null'      | null }
+    | { base: 'int'       | null }
+    | { base: 'dbl'       | null }
+    | { base: 'flt'       | null }
+    | { base: 'any'       | null, size: number }
+    | { base: 'model'     | null, model: ModelSymbol }
+    | { base: 'alias'     | null, alias: AliasSymbol }
+    | { base: 'list'      | null, inner: SemanticResult, size: number }
+    | { base: 'object'    | null, props: Map< string, SemanticResult > }
+    | { base: 'method'    | null, method: MethodSymbol }
+    | { base: 'ptr'       | null, to: SemanticResult }
+    | { base: 'uniqPtr'   | null, to: SemanticResult }
+    | { base: 'uniqVal'   | null, value: SemanticResult }
+    | { base: 'union'     | null, types: TypeAST[] }
+    | { base: 'typeUnion' | null, left: SemanticResult, types: SemanticResult }
+
+
+export type SemanticType = SemanticAttributes & SemanticGeneric
+
+
 
 export type SemanticResult = {
     type: SemanticType
@@ -62,3 +97,4 @@ export type Flow = {
     returnsType   : SemanticResult | null
     alwaysReturns : boolean
 }
+

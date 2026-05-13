@@ -1,28 +1,8 @@
 
 import { Scope, ScopeKinds, ScopeStack } from "./Scopes.js"
+import { SemanticConstructor } from "./SemanticResults.js"
 import { AST, Expr, Program, TypeAST, VariableDeclaration, LiteralIdentifier as AstType, Span, AstKind, BinaryExpression, Unary, Modifiers, ModifierNames, BlockStatement, IfElseStatement, LiteralNumber, LiteralString, LiteralChar, LiteralBool, LiteralNull, LiteralVoid, WhileStatement, DoWhileStatement, LiteralList, ForStatement, RangeExpression, BreakStatement, NextStatement, MatchStatement, MatchClause, LiteralValue, MethodDeclaration, MethodParams, ReturnStatement, Statement, ModelDeclaration, ModelFieldDeclaration, AliasItem, AliasStatement, ExpressionStatement, MemberAccess, LiteralModel, ObjectProps, CallExpression, LiteralIdentifier, OwnExpression, ListAccess, TypeOperatorExpression, TypeItem } from "./Types/AST.js"
-import { Flow, SemanticType, ModelSymbol, MethodSymbol, SemanticResult } from "./Types/Semantic.js"
-
-type baseType = 
-    | 'str'
-    | 'bool'
-    | 'char'
-    | 'void'
-    | 'null'
-    | 'int'
-    | 'flt'
-    | 'dbl'
-    | 'list'
-    | 'any'
-    | 'model'
-    | 'object'
-    | 'alias'
-    | 'method'
-    | 'ptr'
-    | 'uniqPtr'
-    | 'uniqVal'
-    | 'union'
-    | 'typeUnion'
+import { Flow, SemanticType, ModelSymbol, MethodSymbol, SemanticResult, baseType } from "./Types/Semantic.js"
 
 
 class SemanticAnalizer {
@@ -139,7 +119,6 @@ class SemanticAnalizer {
 
         if( t.base === 'typeUnion' ){
 
-
             return nullableToString( `${ this.typeToString( t.types.type )  }`)
 
         }
@@ -237,54 +216,33 @@ class SemanticAnalizer {
 
                 if( this.isPrimitive( node.name ) ){
 
-                    return { 
-                        type: {
-                            base: node.name,
-                            nullable: false,
-                            span: node.span,
-                            type: 'data',
-                            isUnique: false,
-                        },
-
-                        valueKind: 'lvalue'
-
-                    } as SemanticResult
+                    return SemanticConstructor( node.name )
+                        .setSpan( node.span )
+                        .setValueKind( 'lvalue' )
+                    .build()
 
                 }
 
                 const model = this.scopeStack.scope.resolveModel( node.name )
 
                 if( model )  {
-                    return {
-                        type: {
-                            base: 'model',
-                            nullable: false,
-                            span: node.span,
-                            type: 'data',
-                            isUnique: false,
+                    return SemanticConstructor( 'model' )   
+                        .setSpan( node.span )
+                        .setValueKind( 'lvalue' )
+                        .setModel( model ) 
+                    .build()
 
-                            model
-                        },
-                        valueKind: 'lvalue'
-
-                    }
                 }
 
                 const alias = this.scopeStack.scope.resolveAlias( node.name )
                 
                 if( alias )  {
 
-                    return {
-                        type: {
-                            base: 'alias',
-                            nullable: false,
-                            span: node.span,
-                            type: 'data',
-                            isUnique: false,
-                            alias
-                        },
-                        valueKind: 'lvalue'
-                    }
+                    return SemanticConstructor( 'alias' )
+                        .setSpan( node.span )
+                        .setValueKind( 'lvalue' )
+                        .setAlias( alias )
+                    .build()
 
                 }
 
@@ -292,19 +250,12 @@ class SemanticAnalizer {
 
                 if( method ) {
 
-                    return {
-                        type: {
-                            base: 'method',
-                            nullable: false,
-                            isUnique: false,
-                            type: 'data',
-                            span: node.span,
-                            method,
-                        },
-                        valueKind: 'lvalue'
-                    }
-
-
+                    return SemanticConstructor( 'method' )
+                        .setSpan( node.span )
+                        .setValueKind( 'lvalue' )
+                        .setMethod( method )
+                    .build()
+                    
                 }
 
                 throw new Error(`Type '${ node.name }' does not exist ${ this.errorLocation( node.span ) }`)
@@ -313,68 +264,47 @@ class SemanticAnalizer {
 
             case 'Nullable': {
 
-                const inner = this.resolveType( node.inner )
+                return SemanticConstructor()
+                    .load( this.resolveType( node.inner ) )
+                    .setNullable( true )
+                .build()
+            }
+
+            case 'Pointer':
+                return SemanticConstructor( 'ptr' )
+                    .setSpan( node.span )
+                    .setValueKind( 'lvalue' )
+                    .setTo( this.resolveType( node.inner ) )
+                .build()
                 
-                inner.type.nullable = true
+            case 'UniquePointer': 
+                return SemanticConstructor( 'uniqPtr' )
+                    .setSpan( node.span )
+                    .setValueKind( 'lvalue' )
+                    .setTo( this.resolveType( node.inner ) )
+                    .setUnique( true )
+                .build()
 
-                return {
-                    type: inner.type,
-                    valueKind: 'lvalue'
-
-                } as SemanticResult
-
+            case 'Array': 
+                return SemanticConstructor( 'list' )
+                    .setSpan( node.span )
+                    .setValueKind( 'lvalue' )
+                    .setInner( this.resolveType( node.inner ) )
+                    .setSize( node.size )
+                .build()
+        
+            case 'Mut': {
+                return SemanticConstructor()
+                    .load( this.resolveType( node.inner ) )
+                    .setMutable( true )
+                .build()
             }
 
-            case 'Pointer': return {
-                type: {
-                    base: 'ptr',
-                    nullable: false,
-                    span: node.span,
-                    type: 'data',
-                    isUnique: false,
-                    to: this.resolveType( node.inner )
-                },
-                valueKind: 'lvalue'
-            }
-
-            case 'UniquePointer': return {
-                type: {
-                    base: 'uniqPtr',
-                    nullable: false,
-                    span: node.span,
-                    type: 'data',
-                    isUnique: true,
-
-                    to: this.resolveType( node.inner )
-                },
-                valueKind: 'lvalue'
-            }
-
-            case 'Array': return {
-                type: {
-                    base: 'list',
-                    nullable: false,
-                    span: node.span,
-                    inner: this.resolveType( node.inner ),
-                    size: node.size,
-                    isUnique: false,
-
-                    type: 'data' 
-                },
-                valueKind: 'lvalue'
-
-            }
-
-            default: return {
-                type: {
-                    base: null,
-                    nullable: false,
-                    span: node.span,
-                    isUnique: false,
-                    type: 'data'
-                },
-                valueKind: 'lvalue'
-            }
+            default: 
+                return SemanticConstructor( null )
+                    .setSpan( node.span )
+                    .setValueKind( 'lvalue' )
+                .build()
 
         }
 
@@ -410,17 +340,10 @@ class SemanticAnalizer {
 
         if( left.base === "int" && right.base === "int" ) {
 
-            return {
-                type: {
-                    base: "int",
-                    nullable: false,
-                    isUnique: false,
-                    type: 'data',
-                    span: this.spanRange( left.span, right.span )
-                },
-                valueKind: 'rvalue'
-            }
-
+            return SemanticConstructor( 'int' )
+                .setSpan( this.spanRange( left.span, right.span ) )
+                .setValueKind( 'rvalue')
+                .build()
 
         }
 
@@ -433,16 +356,13 @@ class SemanticAnalizer {
         const left  = this.analyzeExpression( node.left, scope ).type
         const right = this.analyzeExpression( node.right, scope ).type
 
-        const a =  {
-            type: {
-                base: "bool",
-                nullable: false,
-                isUnique: false,
-                type: 'data',
-                span: this.spanRange( left.span, right.span )
-            },
-            valueKind: 'rvalue'
-        } as SemanticResult
+
+        const a = SemanticConstructor( 'bool' )
+            .setSpan( this.spanRange( left.span, right.span ) )
+            .setValueKind( 'rvalue' )
+            .build()
+        
+        
 
         if( left.base === 'null' || right.base === 'null' ) return a 
         if( left.base === 'void' || right.base === 'void' ) return a 
@@ -477,16 +397,10 @@ class SemanticAnalizer {
 
         if( !isCompatible  ) throw new Error(`Type '${ this.typeToString( leftType ) }' is not compatible with '${ this.typeToString( rightType ) }' ${this.errorLocation( rightType.span )}`)
 
-        return {
-            type: {
-                base:'void',
-                isUnique: false,
-                nullable: false,
-                type: 'data',
-                span: this.spanRange( leftType.span, rightType.span )
-            },
-            valueKind: 'rvalue'
-        }
+        return SemanticConstructor( 'void' )
+            .setSpan( this.spanRange( leftType.span, rightType.span ) )
+            .setValueKind( 'rvalue' )
+            .build()
 
     }
 
@@ -537,56 +451,31 @@ class SemanticAnalizer {
         const span = this.spanRange( left.span, right.span )
 
         if( left.base === 'str' || right.base === 'str' ){
-            return {
-                type: {
-                    base: 'str',
-                    nullable: false,
-                    isUnique: false,
-                    span,
-                    type: 'data' 
-                },
-                valueKind: 'rvalue'
-
-            }
+            return SemanticConstructor( 'str' )
+                .setSpan( span )
+                .setValueKind( 'rvalue' )
+                .build() 
         }
 
         if( left.base === 'int' && right.base === 'int' ){
-            return {
-                type: {
-                base: 'int',
-                    isUnique: false,
-                    nullable: false,
-                    span,
-                    type: 'data' 
-                },
-                valueKind: 'rvalue'
-            }
+            return SemanticConstructor( 'int' )
+                .setSpan( span )
+                .setValueKind( 'rvalue' )
+                .build()
         }
 
         if( left.base === 'char' && right.base === 'char' ){
-            return {
-                type: {
-                    base: 'str',
-                    isUnique: false,
-                    nullable: false,
-                    span,
-                    type: 'data' 
-                },
-                valueKind: 'rvalue'
-            }
+            return SemanticConstructor( 'str' )
+                .setSpan( span )
+                .setValueKind( 'rvalue' )
+                .build() 
         }
 
         if( left.base === 'bool' && right.base === 'bool' ){
-            return {
-                type: {
-                    base: 'bool',
-                    isUnique: false,
-                    nullable: false,
-                    span,
-                    type: 'data' 
-                },
-                valueKind: 'rvalue'
-            }
+            return SemanticConstructor( 'bool' )
+                .setSpan( span )
+                .setValueKind( 'rvalue' )
+                .build() 
         }
 
         throw new Error(`It is not possible to concatenate '${ left.base }' with '${ right.base }' ${ this.errorLocation( span ) }` )
@@ -637,33 +526,24 @@ class SemanticAnalizer {
 
         }
 
-        return {
-            type: {
-                base: 'object',
-                isUnique: false,
-                nullable: false,
-                props,
-                type: "data",
-                span: node.span
-            },
-            valueKind: 'rvalue'
-        }
-
+        return SemanticConstructor( 'object' )
+            .setSpan( node.span )
+            .setValueKind( 'rvalue' )
+            .setProps( props )
+            .build()
     }
 
     private analyzeObjectProps( node: ObjectProps ): SemanticResult {
         
         const item = this.analyzeExpression( node.item, this.scopeStack.scope )
 
-        if( !item.type ) return {
-            type: {
-                base: 'null',
-                nullable: false,
-                span: node.span,
-                isUnique: false,
-                type: 'data'
-            },
-            valueKind: 'rvalue'
+        if( !item.type ){
+            
+            return SemanticConstructor( 'null' )
+                .setSpan( node.span )
+                .setValueKind( 'rvalue' )
+                .build()
+
         }
 
         return item
@@ -772,19 +652,11 @@ class SemanticAnalizer {
 
     private resolveMethod( method: MethodSymbol, span: Span ): SemanticResult {
 
-        return {
-            type: {
-                base: 'method',
-                method,
-                isUnique: false,
-                nullable: false,
-                span,
-                type: "data"
-            },
-            valueKind: 'rvalue'
-
-        }
-
+        return SemanticConstructor( 'method' )
+            .setSpan( span )
+            .setMethod( method )
+            .setValueKind( 'rvalue' )
+            .build()
     }
 
     private analyzeUniquePtr( node: Unary, scope: Scope ): SemanticResult {
@@ -797,18 +669,12 @@ class SemanticAnalizer {
 
         }
 
-        return {
-            type: {
-                base    : 'uniqPtr',
-                isUnique: true,
-                nullable: false,
-                span    : node.span,
-                type    : 'data',
-                to
-            },
-            valueKind: 'rvalue'
-        }
-
+        return SemanticConstructor( 'uniqPtr' )
+            .setSpan( node.span )
+            .setUnique( true )
+            .setTo( to )
+            .setValueKind( 'rvalue' )
+            .build()
     }
 
     private analyzeUnary( node: Unary, scope: Scope ): SemanticResult {
@@ -824,35 +690,22 @@ class SemanticAnalizer {
                 
                 if( a.base !== 'ptr' ){
 
-                    return {
-                        type: {
-                            isUnique: false,
-                            base    : 'ptr',
-                            nullable: false,
-                            span    : node.span,
-                            type    : 'data',
-                            to      : this.analyzeExpression( node.right, scope )
-                        },
-                        valueKind: 'rvalue'
-                    }
-
+                    return SemanticConstructor( 'ptr' )
+                        .setSpan( node.span )
+                        .setValueKind( 'rvalue' )
+                        .setTo( this.analyzeExpression( node.right, scope ) )
+                        .build()
                 }
 
                 return a.to
 
             }
             case '^':  return this.analyzeUniquePtr( node, scope )
-            case '&':  return {
-                type: {
-                    isUnique: false,
-                    base    : 'ptr',
-                    nullable: false,
-                    span    : node.span,
-                    type    : 'data',
-                    to      : this.analyzeExpression( node.right, scope )
-                },
-                valueKind: 'rvalue'
-            }
+            case '&':  return SemanticConstructor( 'ptr' )
+                .setSpan( node.span )
+                .setValueKind( 'rvalue' )
+                .setTo( this.analyzeExpression( node.right, scope ) )
+                .build() 
 
         }
 
@@ -870,18 +723,12 @@ class SemanticAnalizer {
 
         }
 
-        return {
-            type: {
-                base: 'uniqVal',
-                isUnique: true,
-                nullable: false,
-                span: node.span,
-                type: 'data',
-                value
-            },
-            valueKind: 'rvalue'
-        }
-
+        return SemanticConstructor( 'uniqVal' )
+            .setSpan( node.span )
+            .setUnique( true )
+            .setValue( value )
+            .setValueKind( 'rvalue' )
+            .build()
     }
 
     private analyzeIdentifier( node: LiteralIdentifier, scope: Scope ): SemanticResult {
@@ -895,32 +742,22 @@ class SemanticAnalizer {
         if( symbolMethod ) return this.resolveMethod( symbolMethod, node.span )
 
         const symbolModel = this.scopeStack.scope.resolveModel( n.name )
-        if( symbolModel ) return {
-            type: {
-                base: 'model',
-                model: symbolModel,
-                isUnique: false,
-                nullable: false,
-                span: node.span,
-                type: 'data'
-            },
-            valueKind: 'lvalue'
-
-        }
+        if( symbolModel )
+            return SemanticConstructor( 'model' )
+                .setSpan( node.span )
+                .setModel( symbolModel  )
+                .setValueKind( 'lvalue' )
+                .build()  
+            
 
         const aliasSymbol = this.scopeStack.scope.resolveAlias( n.name )
-        if( aliasSymbol ) return {
-            type: {
-                base     : 'alias',
-                alias    : aliasSymbol,
-                isUnique : false,
-                nullable : false,
-                span     : aliasSymbol.identifier.span,
-                type     : "data" 
-            },
-            valueKind : 'lvalue'
-        }
-
+        if( aliasSymbol ) 
+            return SemanticConstructor( 'alias' )
+                .setSpan( aliasSymbol.identifier.span )
+                .setAlias( aliasSymbol )
+                .setValueKind( 'lvalue' )
+                .build() 
+        
         throw new Error(`Identifier '${ n.name }' was never declared ${ this.errorLocation( node.span ) }`)
 
     }
@@ -968,18 +805,11 @@ class SemanticAnalizer {
 
         const semantic = types.map( t => t.type )
 
-        return {
-            type: {
-                base     : 'union',
-                isUnique : false,
-                nullable : false,
-                type     : "data",
-                types    : semantic,
-                span
-            },
-            valueKind: 'rvalue'
-
-        }
+        return SemanticConstructor( 'union' )
+            .setSpan( span )
+            .setUniontypes( semantic )
+            .setValueKind( 'rvalue' )
+            .build()
 
     }
 
@@ -993,19 +823,10 @@ class SemanticAnalizer {
 
             // XD
 
-            return {
-
-                type: {
-                    base: 'bool',
-                    isUnique: false,
-                    nullable: false,
-                    span: node.span,
-                    type: 'data'
-                },
-                valueKind: 'rvalue'
-
-            }
-
+            return SemanticConstructor( 'bool' )
+                .setSpan( node.span )
+                .setValueKind( 'rvalue' )
+                .build()
         }
 
         if( union.type.base === 'union' ){
@@ -1016,102 +837,55 @@ class SemanticAnalizer {
 
         }
 
-        return {
-
-            type: {
-                base: 'typeUnion',
-                isUnique: false,
-                left: leftType,
-                nullable: false,
-                type: 'data',
-                types: union
-            },
-            valueKind: 'rvalue'
-        } as SemanticResult
-
+        return SemanticConstructor( 'typeUnion' )
+            .setSpan( node.span )
+            .setValueKind( 'rvalue' )
+            .setLeft( leftType )
+            .setTypeUnionTypes( union )
+            .build() 
+        
     }
 
     private analyzeExpression( node: Expr , scope: Scope ): SemanticResult {
 
         switch( node.kind ) {
 
-            case AstKind.LiteralString: return {
-                type: {
-                    base: 'str',
-                    isUnique: false,
-                    nullable: false,
-                    span: node.span,
-                    type: 'data' 
-                },
-                valueKind: 'rvalue'
-            }
-
-            case AstKind.LiteralNumber: return { /////////////// trocar pra LiteralInt e adicionar float/double
-                type: {
-
-                    base: 'int',                   
-                    isUnique: false,
-                    nullable: false,
-                    span: node.span,
-                    type: 'data' 
-                },
-
-                valueKind: 'rvalue'
-
-            }
-
-            case AstKind.LiteralBool: return {
-                type: {
-                    base: 'bool',
-                    isUnique: false,
-                    nullable: false,
-                    span: node.span,
-                    type: 'data' 
-                },
-
-                valueKind: 'rvalue'
-
-            }
+            case AstKind.LiteralString: 
+                return SemanticConstructor( 'str' )
+                    .setSpan( node.span )
+                    .setValueKind( 'rvalue' )
+                    .build() 
+        
+            case AstKind.LiteralNumber: /////////////// trocar pra LiteralInt e adicionar float/double
+                return SemanticConstructor( 'int' )
+                    .setSpan( node.span )
+                    .setValueKind( 'rvalue' )
+                    .build()
+            
+            case AstKind.LiteralBool:
+                return SemanticConstructor( 'bool' )
+                    .setSpan( node.span )
+                    .setValueKind( 'rvalue' )
+                    .build() 
            
-            case AstKind.LiteralChar: return {
-                type: {
+            case AstKind.LiteralChar:
+                return SemanticConstructor( 'char' )
+                    .setSpan( node.span )
+                    .setValueKind( 'rvalue' )
+                    .build() 
 
-                    base: 'char',
-                    isUnique: false,
-                    nullable: false,
-                    span: node.span,
-                    type: 'data' 
-                },
+            case AstKind.LiteralNull:
+                return SemanticConstructor( 'null' )
+                    .setSpan( node.span )
+                    .setNullable( true )
+                    .setValueKind( 'rvalue' )
+                    .build() 
 
-                valueKind: 'rvalue'
-
-            }
-
-            case AstKind.LiteralNull: return {
-                type: {
-                    base: 'null',
-                    isUnique: false,
-                    nullable: true,
-                    span: node.span,
-                    type: 'data' 
-                },
-
-                valueKind: 'rvalue'
-
-            }
-
-            case AstKind.LiteralVoid: return {
-                type: {
-                    base: 'void',
-                    isUnique: false,
-                    nullable: false,
-                    span: node.span,
-                    type: 'data' 
-                },
-
-                valueKind: 'rvalue'
-
-            }
+            case AstKind.LiteralVoid: 
+                return SemanticConstructor( 'void' )
+                    .setSpan( node.span )
+                    .setValueKind( 'rvalue' )
+                    .build()
 
             case AstKind.MemberAccess: return this.analyzeMemberAccess( node as MemberAccess )
 
@@ -1143,18 +917,10 @@ class SemanticAnalizer {
 
                 console.warn(`Expression type '${ node.kind }' has no analysis`)
 
-                return {
-
-                    type: {
-                        base: null,
-                        isUnique: false,
-                        nullable: false,
-                        span: node.span,
-                        type: 'data' 
-                    },
-                    valueKind: 'lvalue'
-
-                }
+                return SemanticConstructor( null )
+                .setSpan( node.span )
+                .setValueKind( 'lvalue' )
+                .build()
 
             }
 
@@ -1391,20 +1157,20 @@ class SemanticAnalizer {
 
         if( a.base === b.base ) {
 
-            if( a.base === 'list'){
-                return {
-                    base: a.base,
-                    nullable: a.nullable || b.nullable,
-                    span: a.span,
-                    size: a.size
-                } as SemanticType
-            }
+            if( a.base === 'list') 
+                return SemanticConstructor( 'list' )
+                    .setNullable( a.nullable || b.nullable )
+                    .setSpan( a.span )
+                    .setSize( a.size )
+                    .build()
+                    .type
+                
+                return SemanticConstructor( a.base )
+                    .setNullable( a.nullable || b.nullable )
+                    .setSpan( a.span )
+                    .build()
+                    .type
 
-            return {
-                base: a.base,
-                nullable: a.nullable || b.nullable,
-                span: a.span
-            } as SemanticType
         }
 
         if( a.base === 'null' ) return {
@@ -1419,7 +1185,7 @@ class SemanticAnalizer {
 
         const nullable = a.nullable || b.nullable ? 'nullable ' : ''
 
-        throw new Error(`Type ${ b.base } differs in ${ nullable }literal ${ a.base } ${ this.errorLocation( b.span ) }`)
+        throw new Error(`Type ${ b.base } differs in ${ nullable } literal ${ a.base } ${ this.errorLocation( b.span ) }`)
     
     }
 
@@ -1427,33 +1193,19 @@ class SemanticAnalizer {
 
         if( node.size === 0 ) {
 
-           const a = {
-                base: 'any',
-                nullable: false,
-                span: node.span,
-                size: 0,
-                type: 'data',
-                isUnique: false
-            } as SemanticType
+           const a = SemanticConstructor( 'any' )
+                .setSpan( node.span )
+                .setSize( 0 )
+                .setValueKind( 'rvalue' )
+                .build()
 
-            return {
-                type: {
-                    base: 'list',
-                    nullable: false,
-                    span: node.span,
-                    isUnique: false,
-                    size: node.size,
-                    type: 'data',
-                    inner: {
-                        type: a,
-                        valueKind: 'rvalue'
-                    } 
-                },
-                valueKind: 'rvalue'
-
-            } 
-
-
+            return SemanticConstructor( 'list' )
+                .setSpan( node.span )
+                .setValueKind( 'rvalue' )
+                .setInner( a )
+                .setSize( node.size )
+                .build()
+    
         }
 
         let currentType = this.analyzeExpression( node.list[ 0 ], scope ).type
@@ -1465,22 +1217,13 @@ class SemanticAnalizer {
             currentType = this.mergeTypes( currentType, nextType )
         }
 
-        return {
-            type: {
-                base: 'list',
-                inner: {
-                    type: currentType,
-                    valueKind: 'rvalue'
-                },
-                nullable: false,
-                isUnique: false,
-                span: node.span,
-                size: node.size,
-                type: 'data' 
-            },
-            valueKind: 'rvalue'
-        }
-
+        return SemanticConstructor( 'list' )
+            .setSpan( node.span )
+            .setSize( node.size )
+            .setValueKind( 'rvalue' )
+            .setInner( { type: currentType, valueKind: 'rvalue' } )
+            .build()
+        
     }
 
     private checkModifiers( modifiers: Modifiers[], scope: Scope ) {
