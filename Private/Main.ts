@@ -94,15 +94,8 @@ x.a;
    
 let code = `
 
-    model modelo { int a };
+   mut int a = 0;
 
-    model sla { str b, int c };
-
-    alias A: modelo | sla; 
-
-    A XD = { c: 1, b: "a" };
-
-    A XD2 = { a: 1 };
 
 `
 
