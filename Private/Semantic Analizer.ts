@@ -27,7 +27,7 @@ class SemanticAnalizer {
 
         const func = this[ this.firstLower( ast.kind ) as keyof SemanticAnalizer ] as ( node: AST ) => void | SemanticResult | Flow
 
-        if( !( func instanceof Function )) throw new Error(`"${ ast.kind }" Does't not exist in Semantic Analyzer `)
+        if( !( func instanceof Function ) ) throw new Error(`"${ ast.kind }" Does't not exist in Semantic Analyzer `)
 
         const returns = func.call( this, ast ) ?? null
 
@@ -1358,7 +1358,7 @@ class SemanticAnalizer {
 
         if( node.initializer ){
             const type = typeSemanticResult.type
-
+            
             const initializer_ = this.analyzeExpression( node.initializer, this.scopeStack.scope )
             const initializer = initializer_.type
             
@@ -2036,7 +2036,7 @@ class SemanticAnalizer {
     private literalBool( node: LiteralBool ) {
 
         return this.analyzeExpression( node, this.scopeStack.scope )
-    
+
     }
 
     private literalNull( node: LiteralNull ) {
