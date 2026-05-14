@@ -5,6 +5,7 @@
 import { Lexer } from "./Lexer.js"
 import Parser from "./Parser.js"
 import SemanticAnalizer from "./Semantic Analizer.js"
+import { Transpiler } from "./Transpilation/Transpiler.js"
 
 /*
 function loadCode( fileName: string ){
@@ -89,14 +90,26 @@ x.a;
         }
 
         A XD = { a: 1 } ; /// falaq que 'b' é missing
+
+
+
+    int  x = 0;
+    str  y = "Testando";
+    char z = 't';
+    void a = void;
+    null b = null;
+    bool c = true;
+    bool d = false;
+
     */
    
    
 let code = `
 
-    int x = 1;
-
-    x = 0;
+    met void x( int y, int z = 0 ) {
+    
+        ret void;
+    }
 
 `
 
@@ -111,3 +124,6 @@ const ast = Parser.Parse( tokens )
 // console.log( JSON.stringify( ast, null, 3 ) )
 
 SemanticAnalizer.Analize( ast )
+
+const CCode = Transpiler.Transpile( ast )
+console.log( CCode )

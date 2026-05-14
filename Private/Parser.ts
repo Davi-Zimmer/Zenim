@@ -1556,7 +1556,7 @@ class Parser {
     private primaryBoolLiteral(){
         return { 
             kind  : AstKind.LiteralBool,
-            value :  this.previus().literal,
+            value :  this.previus().lexeme,
             span  : this.getPreviousSpan()
         } as LiteralBool
     }
