@@ -341,7 +341,6 @@ export type TypeAST =
   | { span: Span, kind: "Nullable", inner: TypeAST }
   | { span: Span, kind: "Model", model: ModelSymbol }
   | { span: Span, kind: "Reference", refName: string }
-  | { span: Span, kind: "Mut", inner: TypeAST }
 
 export interface TypedBinding extends TypeItem {
     identifier : string

@@ -88,14 +88,15 @@ x.a;
         
         }
 
-         A XD = { a: 1 }; /// falaq que 'b' é missing
+        A XD = { a: 1 } ; /// falaq que 'b' é missing
     */
    
    
 let code = `
 
-   mut int a = 0;
+    int x = 1;
 
+    x = 0;
 
 `
 

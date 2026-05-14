@@ -1,6 +1,5 @@
-import { Span, TypeAST } from "./Types/AST.js"
-import { AliasSymbol, baseType, MethodSymbol, ModelSymbol, SemanticAttributes, SemanticResult } from "./Types/Semantic"
-
+import { Modifiers, Span, TypeAST } from "./Types/AST.js"
+import { AliasSymbol, baseType, MethodSymbol, ModelSymbol, SemanticAttributes, SemanticResult, SemanticType } from "./Types/Semantic"
 
 class SemanticXConstructor {
 
@@ -17,26 +16,21 @@ class SemanticXConstructor {
         const generic = {
             base      : null,
             isUnique  : false,
-            mutable   : false,
             nullable  : false,
             span      : {} as Span,
             type      : 'data'
         }
 
         this.semanticResult = {
-            type: generic,
-            valueKind: 'lvalue'
+            type      : generic,
+            valueKind : 'lvalue',
+            mutable   : false
         } as SemanticResult
 
     }
 
     public setUnique( b: boolean ){
         this.semanticResult.type.isUnique = b
-        return this
-    }
-
-    public setMutable( b: boolean ){
-        this.semanticResult.type.mutable  = b
         return this
     }
     
@@ -65,6 +59,39 @@ class SemanticXConstructor {
         return this
     }
 
+    //----- modifiers ----- \\\
+    public setMutable( b: boolean ){
+        this.semanticResult.mutable = b
+        return this
+    }
+    
+    public setOnce( b: boolean ){
+        this.semanticResult.once = b
+    }
+
+    public setModifiers( m: Modifiers[] ){
+
+        for( const modifier of m ){
+            
+            switch( modifier.name ){
+
+                case 'Mut' : this.setMutable( true ); continue
+                case 'Once': this.setOnce( true ); continue 
+
+                default: {
+
+                    throw new Error(`Unknown modifier '${ modifier }'`)
+
+                }
+
+            }
+
+        }
+
+        return this
+
+    }
+
     public build(){
 
         if( this.semanticResult.type.base === null ){
@@ -78,8 +105,13 @@ class SemanticXConstructor {
         return this.semanticResult
     }
 
-    public load( s: SemanticResult ){
+    public loadResult( s: SemanticResult ){
         this.semanticResult = s 
+        return this
+    }
+
+    public loadType( s: SemanticType ){
+        this.semanticResult.type = s
         return this
     }
 
@@ -439,7 +471,7 @@ export function SemanticConstructor< T extends keyof semanticMap >( type?: T | n
 
     if( !type ) return new SemanticXConstructor() as semanticMap[ T ]
 
-    const A = {
+    const sConstructor = {
 
         alias     : SemanticAliasConstructor,
         any       : SemanticAnyConstructor,
@@ -463,8 +495,8 @@ export function SemanticConstructor< T extends keyof semanticMap >( type?: T | n
 
     }
 
-    const a = A[ type ] ? new A[ type ]() : new SemanticXConstructor()
+    const itemConstructor = sConstructor[ type ] ? new sConstructor[ type ]() : new SemanticXConstructor()
     
-    return a as semanticMap[ T ]
+    return itemConstructor as semanticMap[ T ]
 
 }

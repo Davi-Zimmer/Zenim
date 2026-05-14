@@ -12,8 +12,6 @@
 
 #### DO NOW
 
-- modifiers ( fix )
-
 
 #### To Finish
 - float / double
