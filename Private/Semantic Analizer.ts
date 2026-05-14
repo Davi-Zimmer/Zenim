@@ -224,7 +224,6 @@ class SemanticAnalizer {
                 }
 
                 const model = this.scopeStack.scope.resolveModel( node.name )
-
                 if( model )  {
                     return SemanticConstructor( 'model' )   
                         .setSpan( node.span )
@@ -235,7 +234,6 @@ class SemanticAnalizer {
                 }
 
                 const alias = this.scopeStack.scope.resolveAlias( node.name )
-                
                 if( alias )  {
 
                     return SemanticConstructor( 'alias' )
@@ -247,7 +245,6 @@ class SemanticAnalizer {
                 }
 
                 const method = this.scopeStack.scope.resolveMethod( node.name )
-
                 if( method ) {
 
                     return SemanticConstructor( 'method' )
@@ -262,13 +259,11 @@ class SemanticAnalizer {
 
             }
 
-            case 'Nullable': {
-
+            case 'Nullable': 
                 return SemanticConstructor()
-                    .load( this.resolveType( node.inner ) )
+                    .loadResult( this.resolveType( node.inner ) )
                     .setNullable( true )
                 .build()
-            }
 
             case 'Pointer':
                 return SemanticConstructor( 'ptr' )
@@ -292,13 +287,6 @@ class SemanticAnalizer {
                     .setInner( this.resolveType( node.inner ) )
                     .setSize( node.size )
                 .build()
-        
-            case 'Mut': {
-                return SemanticConstructor()
-                    .load( this.resolveType( node.inner ) )
-                    .setMutable( true )
-                .build()
-            }
 
             default: 
                 return SemanticConstructor( null )
@@ -392,6 +380,12 @@ class SemanticAnalizer {
         const rightType = right.type
 
         this.checkAssignmentErrors( left, right, node )
+
+        if( !left.mutable ) {
+
+            throw new Error(`Cannot assign to a immutable variable. Use 'mut' before declaration ${ this.errorLocation( node.span ) }`)
+
+        }
 
         const isCompatible = this.isAssignable( leftType, rightType )
 
@@ -736,7 +730,13 @@ class SemanticAnalizer {
         const n = ( node as AstType ) 
 
         const symbolVar = this.scopeStack.scope.resolveVar( n.name )
-        if( symbolVar ) return this.resolveType( symbolVar.kind )
+        if( symbolVar ) {
+            const var_ = this.resolveType( symbolVar.kind )
+            return SemanticConstructor()
+                .loadResult( var_ )
+                .setModifiers( symbolVar.modifiers )
+                .build()          
+        }
 
         const symbolMethod = this.scopeStack.scope.resolveMethod( n.name )
         if( symbolMethod ) return this.resolveMethod( symbolMethod, node.span )
@@ -782,20 +782,19 @@ class SemanticAnalizer {
 
         if( targ.type.base === 'list' ){
 
-            return {
-                type: targ.type.inner.type,
-                valueKind: 'rvalue' // pode ser tanto r quanto l ( não sei como faz isso XD )
-            }
-
+            return SemanticConstructor() 
+                .loadType( targ.type.inner.type )
+                .setValueKind( 'rvalue' )  // pode ser tanto r quanto l ( não sei como faz isso XD )
+                .build()
+            
         }
 
-        return {
-            type: targ.type,
-            valueKind: 'rvalue'
-        }
-
+        return SemanticConstructor()
+            .loadResult( targ )
+            .setValueKind( 'rvalue' )
+            .build() 
+        
         // if( targ.type.size > index.type ){}
-
 
     }
 
@@ -1193,7 +1192,7 @@ class SemanticAnalizer {
 
         if( node.size === 0 ) {
 
-           const a = SemanticConstructor( 'any' )
+           const inner = SemanticConstructor( 'any' )
                 .setSpan( node.span )
                 .setSize( 0 )
                 .setValueKind( 'rvalue' )
@@ -1202,7 +1201,7 @@ class SemanticAnalizer {
             return SemanticConstructor( 'list' )
                 .setSpan( node.span )
                 .setValueKind( 'rvalue' )
-                .setInner( a )
+                .setInner( inner )
                 .setSize( node.size )
                 .build()
     
@@ -1217,11 +1216,17 @@ class SemanticAnalizer {
             currentType = this.mergeTypes( currentType, nextType )
         }
 
+        const inner = SemanticConstructor()
+            .loadType( currentType )
+            .setValueKind( 'rvalue' )
+            .build()
+
+
         return SemanticConstructor( 'list' )
             .setSpan( node.span )
             .setSize( node.size )
             .setValueKind( 'rvalue' )
-            .setInner( { type: currentType, valueKind: 'rvalue' } )
+            .setInner( inner )
             .build()
         
     }
@@ -1346,7 +1351,7 @@ class SemanticAnalizer {
             
 
         }
-
+        
     }
     
     private checkInitializer( node: VariableDeclaration | MethodParams | ModelFieldDeclaration, typeSemanticResult: SemanticResult ){
@@ -1449,8 +1454,8 @@ class SemanticAnalizer {
         this.scopeStack.scope.declareVar({
             identifier: node.identifier,
             initialized: false,
-            kind: node.type
-
+            kind: node.type,
+            modifiers: node.modifiers
         })
 
     }
@@ -1471,10 +1476,10 @@ class SemanticAnalizer {
 
             if( !flowStmt ) continue
 
-            flow.returnsType = {
-                type: this.mergeReturn( flow.returnsType?.type!, flowStmt.returnsType?.type! )!,
-                valueKind: 'lvalue'
-            }
+            flow.returnsType = SemanticConstructor()
+                .loadType( this.mergeReturn( flow.returnsType?.type!, flowStmt.returnsType?.type! )! )
+                .setValueKind( 'lvalue' )    
+                .build()
             
             if( flowStmt.alwaysReturns ){
                 
@@ -1769,11 +1774,10 @@ class SemanticAnalizer {
 
             const flow = this.matchClause( clause )
             
-            matchFlow.returnsType = {
-                type: this.mergeReturn( matchFlow.returnsType?.type!, flow?.returnsType?.type ?? null )!,
-                valueKind: 'lvalue'
-            
-            }
+            matchFlow.returnsType = SemanticConstructor()
+                .loadType( this.mergeReturn( matchFlow.returnsType?.type!, flow?.returnsType?.type ?? null )! )    
+                .setValueKind( 'lvalue' )
+                .build()
 
             if( !flow?.alwaysReturns ){
 
@@ -1789,10 +1793,11 @@ class SemanticAnalizer {
 
             const elseFlow = this.visitScopes( node.else )        
 
-            matchFlow.returnsType = {
-                type: this.mergeReturn( matchFlow.returnsType?.type!, elseFlow?.returnsType?.type ?? null )!,
-                valueKind: "lvalue"
-            } 
+            matchFlow.returnsType = SemanticConstructor()
+                .loadType( this.mergeReturn( matchFlow.returnsType?.type!, elseFlow?.returnsType?.type ?? null )! )    
+                .setValueKind( 'lvalue' )
+                .build()
+            
 
             if( !elseFlow?.alwaysReturns ){
 
@@ -1825,7 +1830,8 @@ class SemanticAnalizer {
         this.scopeStack.scope.declareVar({
             identifier: node.identifier,
             initialized: false,
-            kind: node.type
+            kind: node.type,
+            modifiers: node.modifiers
         })
 
     }

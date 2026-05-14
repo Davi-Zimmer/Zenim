@@ -1,9 +1,8 @@
-import { LiteralIdentifier, Span, TypeAST } from "./AST.js"
+import { LiteralIdentifier, Modifiers, Span, TypeAST } from "./AST.js"
 
 export type SemanticGeneric = {
     nullable: boolean
     isUnique: boolean
-    mutable: boolean 
     span: Span
     type: 'data'
 }
@@ -58,6 +57,8 @@ export type SemanticType = SemanticAttributes & SemanticGeneric
 
 export type SemanticResult = {
     type: SemanticType
+    mutable: boolean
+    once   : boolean 
     valueKind: 'lvalue' | 'rvalue'
 }
 
@@ -71,6 +72,7 @@ export interface SymbolInfo {
     identifier  : LiteralIdentifier 
     kind        : TypeAST
     initialized : boolean
+    modifiers   : Modifiers[]
 }
 
 export type ModelSymbol = {
