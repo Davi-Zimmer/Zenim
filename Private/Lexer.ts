@@ -145,6 +145,8 @@ export class Lexer {
 
     private isLineComment(){
 
+        this.addToken( TKind.Slash )
+        
         if( this.match("/") ){
             
             while( this.peekChar() !== "\n" && this.isAtEnd() ){
@@ -156,8 +158,6 @@ export class Lexer {
             return
         
         }
-        
-        this.addToken( TKind.Slash )
 
     }
 
@@ -243,7 +243,7 @@ export class Lexer {
             case '+' : this.addToken( TKind.Plus        ); break
             case '-' : this.ifChar  ( TKind.Greater, TKind.Minus, TKind.RightArrow ); break
             case '*' : this.addToken( TKind.Star        ); break
-            case '/' : this.addToken( TKind.Slash       ); this.isLineComment(); break
+            case '/' : this.isLineComment(); break
             case '%' : this.addToken( TKind.Percent     ); break
             case '!' : this.addToken( TKind.Exclamation ); break
             case '?' : this.addToken( TKind.Question    ); break

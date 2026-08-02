@@ -1,4 +1,4 @@
-import { AST, AstKind, BinaryExpression, BlockStatement, Expr, LiteralBool, LiteralChar, LiteralIdentifier, LiteralList, LiteralModel, LiteralNull, LiteralNumber, LiteralString, LiteralVoid, MethodDeclaration, MethodParams, MethodReturn, Modifiers, Program, ReturnStatement, TypeAST, VariableDeclaration } from "../Types/AST.js";
+import { AST, AstKind, BlockStatement, Expr, LiteralBool, LiteralChar, LiteralIdentifier, LiteralList, LiteralModel, LiteralNull, LiteralNumber, LiteralString, LiteralVoid, MethodDeclaration, MethodParams, MethodReturn, Modifiers, Program, ReturnStatement, TypeAST, VariableDeclaration } from "../Types/AST.js";
 import { CFile } from "./CodeBuilder.js";
 import { Inclusions } from "./Inclusions.js";
 
@@ -38,7 +38,6 @@ export class Transpiler {
             case AstKind.MethodDeclaration   : return this.methodDeclaration( ast as MethodDeclaration )    
             case AstKind.BlockStatement      : return this.blocksStatement( ast as BlockStatement )
             case AstKind.__ReturnStatement   : return this.__returnStatement( ast as ReturnStatement )
-            case AstKind.BinaryExpression    : return this.binaryExpression( ast as BinaryExpression ) 
             default: throw new Error(`Unknown Ast kind '${ ast.kind }' in transpiler`)
 
         }   
@@ -93,7 +92,7 @@ export class Transpiler {
         for( const statement of node.body ){
 
             this.visit( statement )
-            
+
         }
 
     }
@@ -116,13 +115,9 @@ export class Transpiler {
         
         const body = this.visit( node.body )
 
-        console.log(`AAAAAAAAAAAAAAAAAAAA ${body} |||||||||||||||||`)
-
-
         this.writeMethod(
             `${ type } ${ node.identifier.name }(${ params }) {\n${ body }\n}`
         )
-        
 
     }
 
@@ -133,14 +128,11 @@ export class Transpiler {
     }
 
     private __returnStatement( node: ReturnStatement ){
+        console.log("return????")
 
-        return this.addTab(  `return ${ this.emitExpression( node.expr ) }; ` )
-
-    }
-
-    private binaryExpression( node: BinaryExpression ){
-
-        return `${ this.visit( node.left ) } ${ node.operator } ${ this.visit( node.right ) }`
+        throw new Error("HEHEHEHA")
+        
+        return this.addTab( `return ${ this.emitExpression( node.expr ) }; `)
 
     }
 
@@ -215,9 +207,7 @@ export class Transpiler {
 
     }
 
-    private emitExpression( expression: Expr | null ): string {
-
-        if( !expression ) return ""
+    private emitExpression( expression: Expr ): string {
 
         const expr = this.visit( expression )
 

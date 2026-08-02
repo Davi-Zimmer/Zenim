@@ -845,7 +845,13 @@ class SemanticAnalizer {
         
     }
 
-    private analyzeExpression( node: Expr , scope: Scope ): SemanticResult {
+    private analyzeExpression( node: Expr, scope: Scope ): SemanticResult {
+
+        if( !node ){
+            return SemanticConstructor( 'void' )
+                .setValueKind( 'rvalue' )
+                .build()
+        }
 
         switch( node.kind ) {
 

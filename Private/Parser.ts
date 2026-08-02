@@ -597,6 +597,8 @@ class Parser {
 
         let initializer = this.parseInitializer()
 
+        // console.log( initializer )
+
         return {
             kind: AstKind.VariableDeclaration,
             identifier,
@@ -917,14 +919,26 @@ class Parser {
 
         const spanStart = this.getPreviousSpan()
 
-        const expr = this.expression()
+        const span = this.spanRange( spanStart.start, this.getPreviousSpan().end )
+
+        let expr = null
+
+        if( !this.check( TKind.Semicolon ) ) expr = this.expression()
+        else {
+
+            expr = {
+                kind: AstKind.LiteralVoid,
+                span,
+            } as LiteralVoid
+
+        }
 
         this.consume( TKind.Semicolon )
 
         return {
             kind: AstKind.__ReturnStatement,
             expr,
-            span: this.spanRange( spanStart.start, this.getPreviousSpan().end )
+            span
         }
         
     }
@@ -1109,6 +1123,8 @@ class Parser {
     private expression(){
 
         if( this.isAtEnd() ) throw new Error(`EOF in Expression`)
+
+        // if( this.check( TKind.Semicolon ) ) throw new Error("LOL")
 
         return this.range()
 
@@ -1323,6 +1339,13 @@ class Parser {
 
         if( this.match( TKind.Star, TKind.Slash, TKind.Percent ) ){
 
+            console.log( this.tokens[ this.current - 2 ] )
+            console.log( this.tokens[ this.current - 1 ] )
+            console.log( this.tokens[ this.current  ] )
+            console.log( this.tokens[ this.current + 1 ] )
+            console.log( this.tokens[ this.current + 2 ] )
+
+
             const operator = this.previus()
 
             const right = this.exponent()
@@ -1343,10 +1366,13 @@ class Parser {
     }
 
     private exponent(){
-       
+
         let expr = this.unary()
-        
-        if( this.match( TKind.Star ) && this.check( TKind.Star ) ) {
+
+        if( this.check( TKind.Star ) && this.checkFuturePeek( 1, TKind.Star ) ) {
+
+            this.consume( TKind.Star )
+            this.consume( TKind.Star )
 
             const right = this.exponent()
 
