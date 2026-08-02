@@ -101,15 +101,29 @@ x.a;
     bool c = true;
     bool d = false;
 
+
+    met void x( int y, int z = 0 ) {
+    
+        ret;
+    }
+
+
+    met int square( int number ) {
+
+        ret number * number;
+
+    }
     */
    
    
 let code = `
 
-    met void x( int y, int z = 0 ) {
-    
-        ret void;
+    met int square( int number ) {
+
+        ret number / number;
+
     }
+
 
 `
 
@@ -117,7 +131,7 @@ let code = `
 
 const tokens = Lexer.ScanTokens( code )
 
-// console.log( tokens )
+//console.log( tokens )
 
 const ast = Parser.Parse( tokens )
 
@@ -126,4 +140,5 @@ const ast = Parser.Parse( tokens )
 SemanticAnalizer.Analize( ast )
 
 const CCode = Transpiler.Transpile( ast )
+
 console.log( CCode )

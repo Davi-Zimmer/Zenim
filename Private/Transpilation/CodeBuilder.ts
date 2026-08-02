@@ -2,32 +2,32 @@ import { Inclusions } from "./Inclusions.js"
 
 export class CFile {
     
-    private includes      = new Set< string >
-    private typedefs      = new Set< string >
-    private forwardDecls  = new Set< string >
-    private globals       = new Set< string >
-    private structs       = new Set< string >
-    private methodDecls   = new Set< string >
-    private functionImpls = new Set< string >
-    private startup       = new Set< string >
-    private mainBody      = new Set< string >
+    private includes      = new Set  < string >
+    private typedefs      = new Array< string >
+    private forwardDecls  = new Array< string >
+    private globals       = new Array< string >
+    private structs       = new Array<string>()
+    private methodDecls   = new Array<string>()
+    private functionImpls = new Array<string>()
+    private startup       = new Array<string>()
+    private mainBody      = new Array<string>()
 
 
     public join(){
         
         return [
-
-            [ ...this.includes      ].join('\n'),
-            [ ...this.typedefs      ].join('\n'),
-            [ ...this.forwardDecls  ].join('\n'),
-            [ ...this.globals       ].join('\n'),
-            [ ...this.structs       ].join('\n'),
-            [ ...this.methodDecls   ].join('\n'),
-            [ ...this.functionImpls ].join('\n'),
+            
+            [ "#include <stdio.h>\n"    , ...this.includes ].join('\n'),
+            this.typedefs       .join('\n'),
+            this.forwardDecls   .join('\n'),
+            this.globals        .join('\n'),
+            this.structs        .join('\n'),
+            this.methodDecls    .join('\n'),
+            this.functionImpls  .join('\n'),
             
             'int main() {',
-            [ ...this.startup       ].join('\n'),
-            [ ...this.mainBody      ].join('\n'),
+                this.startup    .join('\n'),
+                this.mainBody   .join('\n'),
             '}'
 
         ].join('\n\n')
@@ -42,13 +42,13 @@ export class CFile {
 
     public writeBody( line: string ){
         
-        this.mainBody.add( line )
+        this.mainBody.push( line )
     
     }
 
     public writeMethod( method: string ){
         
-        this.methodDecls.add( method )
+        this.methodDecls.push( method )
 
     }
 

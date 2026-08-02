@@ -1,3 +1,4 @@
 export enum Inclusions {
-    boolean = '<stdbool.h>' 
+    boolean = '<stdbool.h>',
+    noset   = '<stdlib.h>'
 }
